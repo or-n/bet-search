@@ -4,6 +4,8 @@ pub trait Name {
 
 pub trait Site {
     const SITE: &'static str;
+
+    const COOKIE_ACCEPT_CSS: &'static str;
 }
 
 #[allow(dead_code)]

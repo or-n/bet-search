@@ -8,4 +8,7 @@ impl bookmaker::Name for Book {
 
 impl bookmaker::Site for Book {
     const SITE: &'static str = "https://superbet.pl/zaklady-bukmacherskie/live";
+
+    const COOKIE_ACCEPT_CSS: &'static str =
+        r#"button[id="onetrust-accept-btn-handler"]"#;
 }

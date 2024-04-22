@@ -1,31 +1,18 @@
 mod bookmaker;
+mod download_and_save;
+
 mod efortuna;
 mod sts;
 mod superbet;
 
-use reqwest;
-use std::fs::File;
-use std::io::Write;
-
-async fn get_site(site: &str) -> Result<String, reqwest::Error> {
-    reqwest::get(site).await?.text().await
-}
-
-async fn download_bookmaker_site<Book>() -> std::io::Result<()>
-where
-    Book: bookmaker::Name + bookmaker::Site,
-{
-    let text = get_site(Book::SITE).await.unwrap();
-    let mut file = File::create(format!("downloads/{}.html", Book::NAME))?;
-    file.write_all(text.as_bytes())
-}
+use download_and_save::*;
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), Error> {
     tokio::try_join!(
-        download_bookmaker_site::<efortuna::Book>(),
-        download_bookmaker_site::<sts::Book>(),
-        download_bookmaker_site::<superbet::Book>(),
+        download_and_save::<efortuna::Book>(4444),
+        download_and_save::<sts::Book>(4445),
+        download_and_save::<superbet::Book>(4446),
     )
     .map(|_| ())
 }

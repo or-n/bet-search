@@ -8,4 +8,7 @@ impl bookmaker::Name for Book {
 
 impl bookmaker::Site for Book {
     const SITE: &'static str = "https://www.sts.pl/live";
+
+    const COOKIE_ACCEPT_CSS: &'static str =
+        r#"button[id="CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll"]"#;
 }
