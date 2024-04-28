@@ -8,9 +8,14 @@ pub trait Site {
     const COOKIE_ACCEPT_CSS: &'static str;
 }
 
-#[allow(dead_code)]
 pub type Odds = Vec<f32>;
 
+#[derive(Debug)]
+pub struct Teams {
+    pub team1: String,
+    pub team2: String,
+}
+
 pub trait GetOdds {
-    fn get_odds(site: &String) -> Result<Vec<Odds>, ()>;
+    fn get_odds(site: &String) -> Result<Vec<(Teams, Odds)>, ()>;
 }
