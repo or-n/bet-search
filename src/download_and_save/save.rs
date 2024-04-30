@@ -1,12 +1,8 @@
-use std::fs::File;
 use std::io::Write;
 
-use crate::bookmaker;
-
-pub fn save<Book>(html: String) -> std::io::Result<()>
+pub fn save<P>(content: &[u8], path: P) -> std::io::Result<()>
 where
-    Book: bookmaker::Name,
+    P: AsRef<std::path::Path>,
 {
-    let mut file = File::create(format!("downloads/{}.html", Book::NAME))?;
-    file.write_all(html.as_bytes())
+    std::fs::File::create(path)?.write_all(content)
 }
