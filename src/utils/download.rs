@@ -1,17 +1,12 @@
-use fantoccini::Locator;
 use std::time::Duration;
 use tokio::time::sleep;
 
-use crate::bookmaker;
-
-pub async fn download<Book>(
+pub async fn download(
     client: fantoccini::Client,
-) -> Result<String, fantoccini::error::CmdError>
-where
-    Book: bookmaker::Site,
-{
-    client.goto(Book::SITE).await?;
-    let cookie_accept = Locator::Css(Book::COOKIE_ACCEPT_CSS);
+    url: &str,
+    cookie_accept: fantoccini::Locator<'_>,
+) -> Result<String, fantoccini::error::CmdError> {
+    client.goto(url).await?;
     let mut cookie_accepted = false;
     loop {
         let exit = tokio::select! {
@@ -31,4 +26,11 @@ where
             return Ok(html);
         }
     }
+}
+
+pub trait Download {
+    type Output;
+    type Error;
+
+    async fn download(&self) -> Result<Self::Output, Self::Error>;
 }

@@ -1,5 +1,4 @@
 mod bookmaker;
-mod download;
 mod utils;
 
 mod efortuna;
@@ -7,6 +6,7 @@ mod sts;
 mod superbet;
 
 use bookmaker::Name;
+use utils::{browser::Browser, download::Download};
 
 #[derive(Debug)]
 pub enum Error {
@@ -18,9 +18,9 @@ pub enum Error {
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     tokio::try_join!(
-        download_and_save::<efortuna::Book>(4444),
-        download_and_save::<sts::Book>(4445),
-        download_and_save::<superbet::Book>(4446),
+        download_and_save::<efortuna::Book, efortuna::LivePage>(4444),
+        download_and_save::<sts::Book, sts::LivePage>(4445),
+        download_and_save::<superbet::Book, superbet::LivePage>(4446),
     )
     .map(|(efortuna, sts, superbet)| {
         println!("{}: {:?}", efortuna::Book::NAME, efortuna);
@@ -29,19 +29,25 @@ async fn main() -> Result<(), Error> {
     })
 }
 
-async fn download_and_save<Book>(
+async fn download_and_save<Book, HTML>(
     port: u16,
 ) -> Result<Result<(), utils::browser::Error>, Error>
 where
-    Book: bookmaker::Name + bookmaker::Site + bookmaker::GetOdds,
+    Book: bookmaker::Name,
+    Browser<Book>: Download<
+        Output = Result<HTML, utils::browser::Error>,
+        Error = fantoccini::error::CmdError,
+    >,
+    HTML: bookmaker::SportBets,
 {
-    match utils::browser::client(port).await {
-        Ok(client) => {
-            let html = download::download::<Book>(client)
-                .await
-                .map_err(Error::Download)?;
-            let events = Book::get_odds(&html).map_err(Error::Extract)?;
-            let content = events
+    let result = match Browser::new(port)
+        .download()
+        .await
+        .map_err(Error::Download)?
+    {
+        Ok(html) => {
+            let sport_bets = html.sport_bets().map_err(Error::Extract)?;
+            let content = sport_bets
                 .into_iter()
                 .map(|(teams, odds)| format!("{:?}\n{:?}\n", teams, odds))
                 .collect::<Vec<_>>()
@@ -51,8 +57,9 @@ where
                 format!("downloads/{}.txt", Book::NAME),
             )
             .map_err(Error::Save)?;
-            Ok::<_, Error>(Ok(()))
+            Ok(())
         }
-        Err(connect_error) => Ok(Err(connect_error)),
-    }
+        Err(connect_error) => Err(connect_error),
+    };
+    Ok(result)
 }

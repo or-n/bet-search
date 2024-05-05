@@ -1,5 +1,5 @@
 use crate::bookmaker;
-use scraper::{Html, Selector};
+use crate::utils::{self, browser::Browser};
 
 pub struct Book;
 
@@ -7,18 +7,35 @@ impl bookmaker::Name for Book {
     const NAME: &'static str = "superbet";
 }
 
-impl bookmaker::Site for Book {
-    const SITE: &'static str = "https://superbet.pl/zaklady-bukmacherskie/live";
+pub struct LivePage(String);
 
-    const COOKIE_ACCEPT_CSS: &'static str =
-        r#"button[id="onetrust-accept-btn-handler"]"#;
+impl utils::download::Download for Browser<Book> {
+    type Output = Result<LivePage, utils::browser::Error>;
+    type Error = fantoccini::error::CmdError;
+
+    async fn download(&self) -> Result<Self::Output, Self::Error> {
+        Ok(match utils::browser::client(self.port).await {
+            Ok(client) => Ok(LivePage(
+                utils::download::download(
+                    client,
+                    "https://superbet.pl/zaklady-bukmacherskie/live",
+                    fantoccini::Locator::Css(
+                        r#"button[id="onetrust-accept-btn-handler"]"#,
+                    ),
+                )
+                .await?,
+            )),
+            Err(connect_error) => Err(connect_error),
+        })
+    }
 }
 
-impl bookmaker::GetOdds for Book {
-    fn get_odds(
-        site: &String,
+impl bookmaker::SportBets for LivePage {
+    fn sport_bets(
+        &self,
     ) -> Result<Vec<(bookmaker::Teams, bookmaker::Odds)>, ()> {
-        let document = Html::parse_document(site);
+        use scraper::{Html, Selector};
+        let document = Html::parse_document(&self.0);
         let match_selector = Selector::parse("div.event-card").unwrap();
         let odds_selector =
             Selector::parse("span.odd-button__odd-value-new").unwrap();

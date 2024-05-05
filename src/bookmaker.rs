@@ -2,12 +2,6 @@ pub trait Name {
     const NAME: &'static str;
 }
 
-pub trait Site {
-    const SITE: &'static str;
-
-    const COOKIE_ACCEPT_CSS: &'static str;
-}
-
 pub type Odds = Vec<Result<f32, String>>;
 
 pub struct Teams {
@@ -21,6 +15,6 @@ impl std::fmt::Debug for Teams {
     }
 }
 
-pub trait GetOdds {
-    fn get_odds(site: &String) -> Result<Vec<(Teams, Odds)>, ()>;
+pub trait SportBets {
+    fn sport_bets(&self) -> Result<Vec<(Teams, Odds)>, ()>;
 }

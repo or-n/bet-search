@@ -1,5 +1,5 @@
 use crate::bookmaker;
-use scraper::{Html, Selector};
+use crate::utils::{self, browser::Browser};
 
 pub struct Book;
 
@@ -7,18 +7,35 @@ impl bookmaker::Name for Book {
     const NAME: &'static str = "efortuna";
 }
 
-impl bookmaker::Site for Book {
-    const SITE: &'static str = "https://live.efortuna.pl/";
+pub struct LivePage(String);
 
-    const COOKIE_ACCEPT_CSS: &'static str =
-        r#"button[id="cookie-consent-button-accept"]"#;
+impl utils::download::Download for Browser<Book> {
+    type Output = Result<LivePage, utils::browser::Error>;
+    type Error = fantoccini::error::CmdError;
+
+    async fn download(&self) -> Result<Self::Output, Self::Error> {
+        Ok(match utils::browser::client(self.port).await {
+            Ok(client) => Ok(LivePage(
+                utils::download::download(
+                    client,
+                    "https://live.efortuna.pl/",
+                    fantoccini::Locator::Css(
+                        r#"button[id="cookie-consent-button-accept"]"#,
+                    ),
+                )
+                .await?,
+            )),
+            Err(connect_error) => Err(connect_error),
+        })
+    }
 }
 
-impl bookmaker::GetOdds for Book {
-    fn get_odds(
-        site: &String,
+impl bookmaker::SportBets for LivePage {
+    fn sport_bets(
+        &self,
     ) -> Result<Vec<(bookmaker::Teams, bookmaker::Odds)>, ()> {
-        let document = Html::parse_document(site);
+        use scraper::{Html, Selector};
+        let document = Html::parse_document(&self.0);
         let match_selector = Selector::parse("div.live-match").unwrap();
         let odds_selector = Selector::parse("span.odds_button__value").unwrap();
         let team1_selector =
