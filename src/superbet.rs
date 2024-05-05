@@ -27,6 +27,12 @@ impl bookmaker::GetOdds for Book {
         let team2_selector =
             Selector::parse("div.e2e-event-team2-name").unwrap();
         let team = |x: scraper::ElementRef| x.inner_html().trim().to_string();
+        let ratio_result = |x: scraper::ElementRef| {
+            x.inner_html()
+                .trim()
+                .parse::<f32>()
+                .map_err(|_| x.inner_html())
+        };
         let matches: Vec<_> = document
             .select(&match_selector)
             .map(|x| {
@@ -36,10 +42,7 @@ impl bookmaker::GetOdds for Book {
                     team1: team(team1),
                     team2: team(team2),
                 };
-                let odds = x
-                    .select(&odds_selector)
-                    .map(|x| x.inner_html().trim().parse::<f32>().unwrap())
-                    .collect();
+                let odds = x.select(&odds_selector).map(ratio_result).collect();
                 (teams, odds)
             })
             .collect();

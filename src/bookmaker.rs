@@ -8,7 +8,7 @@ pub trait Site {
     const COOKIE_ACCEPT_CSS: &'static str;
 }
 
-pub type Odds = Vec<f32>;
+pub type Odds = Vec<Result<f32, String>>;
 
 pub struct Teams {
     pub team1: String,
