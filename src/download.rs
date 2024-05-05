@@ -1,19 +1,15 @@
-use fantoccini::{ClientBuilder, Locator};
+use fantoccini::Locator;
 use std::time::Duration;
 use tokio::time::sleep;
 
 use crate::bookmaker;
 
 pub async fn download<Book>(
-    port: u16,
+    client: fantoccini::Client,
 ) -> Result<String, fantoccini::error::CmdError>
 where
     Book: bookmaker::Site,
 {
-    let client = ClientBuilder::native()
-        .connect(format!("http://localhost:{}", port).as_str())
-        .await
-        .expect("failed to connect to WebDriver");
     client.goto(Book::SITE).await?;
     let cookie_accept = Locator::Css(Book::COOKIE_ACCEPT_CSS);
     let mut cookie_accepted = false;
