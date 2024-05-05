@@ -30,40 +30,26 @@ impl utils::download::Download for Browser<Book> {
     }
 }
 
+use bookmaker::Error;
+
 impl bookmaker::SportBets for LivePage {
     fn sport_bets(
         &self,
-    ) -> Result<Vec<(bookmaker::Teams, bookmaker::Odds)>, ()> {
-        use scraper::{Html, Selector};
-        let document = Html::parse_document(&self.0);
-        let match_selector =
-            Selector::parse("div.match-tile-container").unwrap();
-        let odds_selector =
-            Selector::parse("span.odds-button__odd-value").unwrap();
-        let team_selector =
-            Selector::parse("div.match-tile-scoreboard-team__name span")
-                .unwrap();
-        let team = |x: scraper::ElementRef| x.inner_html().trim().to_string();
-        let ratio_result = |x: scraper::ElementRef| {
-            x.inner_html()
-                .trim()
-                .parse::<f32>()
-                .map_err(|_| x.inner_html())
-        };
-        let matches: Vec<_> = document
-            .select(&match_selector)
-            .map(|x| {
-                let mut teams = x.select(&team_selector);
-                let team1 = teams.next().unwrap();
-                let team2 = teams.next().unwrap();
-                let teams = bookmaker::Teams {
-                    team1: team(team1),
-                    team2: team(team2),
-                };
-                let odds = x.select(&odds_selector).map(ratio_result).collect();
-                (teams, odds)
-            })
-            .collect();
-        Ok(matches)
+    ) -> Result<Vec<(bookmaker::Teams, bookmaker::Odds)>, Error> {
+        use scraper::Selector;
+        let team = Selector::parse("div.match-tile-scoreboard-team__name span")
+            .unwrap();
+        utils::sport_bets::extract(
+            &self.0,
+            Selector::parse("div.match-tile-container").unwrap(),
+            Selector::parse("span.odds-button__odd-value").unwrap(),
+            |x| {
+                let mut teams = x.select(&team);
+                Ok([
+                    teams.next().ok_or(Error::MissingTeam1)?,
+                    teams.next().ok_or(Error::MissingTeam2)?,
+                ])
+            },
+        )
     }
 }

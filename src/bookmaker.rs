@@ -15,6 +15,12 @@ impl std::fmt::Debug for Teams {
     }
 }
 
+#[derive(Debug)]
+pub enum Error {
+    MissingTeam1,
+    MissingTeam2,
+}
+
 pub trait SportBets {
-    fn sport_bets(&self) -> Result<Vec<(Teams, Odds)>, ()>;
+    fn sport_bets(&self) -> Result<Vec<(Teams, Odds)>, Error>;
 }
