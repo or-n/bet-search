@@ -30,6 +30,17 @@ impl utils::download::Download for Browser<Book> {
     }
 }
 
+// impl Into<String> for for<'a> &'a LivePage {
+//     fn into(&'a self) -> String {
+//         self.0
+//     }
+// }
+impl Into<String> for &LivePage {
+    fn into(self) -> String {
+        self.0.clone()
+    }
+}
+
 use bookmaker::Error;
 
 impl bookmaker::SportBets for LivePage {

@@ -1,4 +1,5 @@
 mod bookmaker;
+mod team;
 mod utils;
 
 mod efortuna;
@@ -39,6 +40,7 @@ where
         Error = fantoccini::error::CmdError,
     >,
     Page: bookmaker::SportBets,
+    for<'a> &'a Page: Into<String>,
 {
     let result = match Browser::new(port)
         .download()
@@ -46,6 +48,12 @@ where
         .map_err(Error::Download)?
     {
         Ok(html) => {
+            let html_string: String = (&html).into();
+            utils::save::save(
+                html_string.as_bytes(),
+                format!("downloads/{}.html", Book::NAME),
+            )
+            .map_err(Error::Save)?;
             let sport_bets = html
                 .sport_bets()
                 .map_err(|error| Error::Extract(Book::NAME, error))?;
