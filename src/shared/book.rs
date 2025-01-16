@@ -24,3 +24,7 @@ pub enum Error {
 pub trait SportBets {
     fn sport_bets(&self) -> Result<Vec<(Teams, Odds)>, Error>;
 }
+
+pub trait Subpages {
+    fn subpages(&self) -> Vec<String>;
+}
