@@ -1,4 +1,4 @@
-use crate::bookmaker;
+use crate::shared::{self, book};
 use crate::utils::{self, browser::Browser};
 
 pub struct Page(String);
@@ -30,16 +30,14 @@ impl Into<String> for &Page {
     }
 }
 
-use bookmaker::Error;
+use book::Error;
 
-impl bookmaker::SportBets for Page {
-    fn sport_bets(
-        &self,
-    ) -> Result<Vec<(bookmaker::Teams, bookmaker::Odds)>, Error> {
+impl book::SportBets for Page {
+    fn sport_bets(&self) -> Result<Vec<(book::Teams, book::Odds)>, Error> {
         use scraper::Selector;
         let team1 = Selector::parse("div.live-match-info__team--1").unwrap();
         let team2 = Selector::parse("div.live-match-info__team--2").unwrap();
-        utils::sport_bets::extract(
+        shared::sport_bets::extract(
             &self.0,
             Selector::parse("div.live-match").unwrap(),
             Selector::parse("span.odds_button__value").unwrap(),

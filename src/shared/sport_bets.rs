@@ -1,4 +1,4 @@
-use crate::bookmaker::{Error, Odds, Teams};
+use super::book::{Error, Odds, Teams};
 
 pub fn extract(
     page: &String,

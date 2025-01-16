@@ -1,9 +1,9 @@
-use crate::bookmaker;
+use crate::shared::{self, book};
 use crate::utils::{self, browser::Browser};
 
 pub struct Book;
 
-impl bookmaker::Name for Book {
+impl book::Name for Book {
     const NAME: &'static str = "superbet";
 }
 
@@ -36,16 +36,14 @@ impl Into<String> for &LivePage {
     }
 }
 
-use bookmaker::Error;
+use book::Error;
 
-impl bookmaker::SportBets for LivePage {
-    fn sport_bets(
-        &self,
-    ) -> Result<Vec<(bookmaker::Teams, bookmaker::Odds)>, Error> {
+impl book::SportBets for LivePage {
+    fn sport_bets(&self) -> Result<Vec<(book::Teams, book::Odds)>, Error> {
         use scraper::Selector;
         let team1 = Selector::parse("div.e2e-event-team1-name").unwrap();
         let team2 = Selector::parse("div.e2e-event-team2-name").unwrap();
-        utils::sport_bets::extract(
+        shared::sport_bets::extract(
             &self.0,
             Selector::parse("div.event-card").unwrap(),
             Selector::parse("span.odd-button__odd-value-new").unwrap(),

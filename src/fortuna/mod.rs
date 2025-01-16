@@ -1,10 +1,10 @@
 pub mod live;
 pub mod team;
 
-use crate::bookmaker;
+use crate::shared::book;
 
 pub struct Book;
 
-impl bookmaker::Name for Book {
+impl book::Name for Book {
     const NAME: &'static str = "efortuna";
 }
