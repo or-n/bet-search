@@ -1,7 +1,11 @@
 pub mod en;
+pub mod es;
+pub mod it;
 pub mod pl;
 
 pub use en::*;
+pub use es::*;
+pub use it::*;
 pub use pl::*;
 
 pub enum Team {
@@ -11,12 +15,12 @@ pub enum Team {
     IT(IT),
 }
 
-pub enum ES {
-    RealMadrid,
-    Bilbao,
+pub enum FR {
+    Auxerre,
+    PSG,
 }
 
-pub enum IT {
-    Fiorentina,
-    Empoli,
+pub enum GR {
+    Leverkusen,
+    SanktPauli,
 }

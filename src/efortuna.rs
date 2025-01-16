@@ -1,7 +1,6 @@
 use crate::bookmaker;
 use crate::team::{EN::*, ES::*, IT::*, PL::*, *};
 use crate::utils::{self, browser::Browser};
-use std::collections::HashMap;
 
 pub struct Book;
 
