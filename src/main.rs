@@ -12,7 +12,7 @@ use utils::{browser::Browser, download::Download};
 #[tokio::main]
 async fn main() -> Result<(), Error<'static>> {
     tokio::try_join!(
-        download_and_save::<fortuna::Book, fortuna::LivePage>(4444),
+        download_and_save::<fortuna::Book, fortuna::live::Page>(4444),
         // download_and_save::<sts::Book, sts::LivePage>(4445),
         // download_and_save::<superbet::Book, superbet::LivePage>(4446),
     )
