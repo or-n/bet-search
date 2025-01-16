@@ -1,5 +1,5 @@
 use crate::bookmaker;
-use crate::team::{EN::*, ES::*, IT::*, PL::*, *};
+use crate::shared::team::{EN::*, ES::*, IT::*, PL::*, *};
 use crate::utils::{self, browser::Browser};
 
 pub struct Book;

@@ -1,5 +1,5 @@
 mod bookmaker;
-mod team;
+mod shared;
 mod utils;
 
 mod efortuna;
@@ -13,13 +13,13 @@ use utils::{browser::Browser, download::Download};
 async fn main() -> Result<(), Error<'static>> {
     tokio::try_join!(
         download_and_save::<efortuna::Book, efortuna::LivePage>(4444),
-        download_and_save::<sts::Book, sts::LivePage>(4445),
-        download_and_save::<superbet::Book, superbet::LivePage>(4446),
+        // download_and_save::<sts::Book, sts::LivePage>(4445),
+        // download_and_save::<superbet::Book, superbet::LivePage>(4446),
     )
-    .map(|(efortuna, sts, superbet)| {
+    .map(|(efortuna)| {
         println!("{}: {:?}", efortuna::Book::NAME, efortuna);
-        println!("{}: {:?}", sts::Book::NAME, sts);
-        println!("{}: {:?}", superbet::Book::NAME, superbet);
+        // println!("{}: {:?}", sts::Book::NAME, sts);
+        // println!("{}: {:?}", superbet::Book::NAME, superbet);
     })
 }
 
