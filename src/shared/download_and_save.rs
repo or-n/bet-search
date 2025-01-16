@@ -18,8 +18,7 @@ where
         Output = Result<Page, utils::browser::Error>,
         Error = fantoccini::error::CmdError,
     >,
-    Page: super::book::SportBets + super::book::Subpages,
-    for<'a> &'a Page: Into<String>,
+    Page: super::book::SportBets + super::book::Subpages + ToString,
 {
     let result = match Browser::new(port)
         .download()
@@ -27,9 +26,8 @@ where
         .map_err(Error::Download)?
     {
         Ok(html) => {
-            let html_string: String = (&html).into();
             utils::save::save(
-                html_string.as_bytes(),
+                html.to_string().as_bytes(),
                 format!("downloads/{}.html", Book::NAME),
             )
             .map_err(Error::SaveHTML)?;

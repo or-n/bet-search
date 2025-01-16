@@ -28,8 +28,8 @@ impl utils::download::Download for Browser<super::Book> {
     }
 }
 
-impl Into<String> for &Page {
-    fn into(self) -> String {
+impl ToString for Page {
+    fn to_string(&self) -> String {
         self.0.clone()
     }
 }

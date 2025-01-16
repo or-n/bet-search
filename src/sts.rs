@@ -30,8 +30,8 @@ impl utils::download::Download for Browser<Book> {
     }
 }
 
-impl Into<String> for &LivePage {
-    fn into(self) -> String {
+impl ToString for LivePage {
+    fn to_string(&self) -> String {
         self.0.clone()
     }
 }

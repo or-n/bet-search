@@ -5,10 +5,9 @@ mod fortuna;
 mod sts;
 mod superbet;
 
-use shared::book::Name;
-
 #[tokio::main]
 async fn main() -> Result<(), shared::download_and_save::Error<'static>> {
+    use shared::book::Name;
     tokio::try_join!(
         shared::download_and_save::run::<fortuna::Book, fortuna::live::Page>(
             4444
