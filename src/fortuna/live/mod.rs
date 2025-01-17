@@ -1,30 +1,24 @@
 pub mod sport_bets;
 pub mod subpages;
+pub mod tenis;
 
-use crate::utils::{self, browser::Browser};
+use crate::utils;
 
 pub struct Page(String);
 
 const URL: &str = "https://live.efortuna.pl/";
 
-impl utils::download::Download for Browser<super::Book> {
-    type Output = Result<Page, utils::browser::Error>;
-    type Error = fantoccini::error::CmdError;
+impl utils::download::Download for utils::browser::Browser<super::Book> {
+    type Output = Result<Page, fantoccini::error::CmdError>;
+    type Error = utils::browser::Error;
 
     async fn download(&self) -> Result<Self::Output, Self::Error> {
-        Ok(match utils::browser::client(self.port).await {
-            Ok(client) => Ok(Page(
-                utils::download::download(
-                    client,
-                    URL,
-                    fantoccini::Locator::Css(
-                        r#"button[id="cookie-consent-button-accept"]"#,
-                    ),
-                )
-                .await?,
-            )),
-            Err(connect_error) => Err(connect_error),
-        })
+        let cookie_accept = fantoccini::Locator::Css(
+            r#"button[id="cookie-consent-button-accept"]"#,
+        );
+        let browser = utils::browser::client(self.port).await?;
+        let page = utils::download::download(browser, URL, cookie_accept).await;
+        Ok(page.map(Page))
     }
 }
 
