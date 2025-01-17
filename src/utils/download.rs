@@ -1,7 +1,7 @@
 use std::time::Duration;
 use tokio::time::sleep;
 
-pub async fn download(
+pub async fn run(
     client: fantoccini::Client,
     url: &str,
     cookie_accept: fantoccini::Locator<'_>,

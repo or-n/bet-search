@@ -1,26 +1,18 @@
-use crate::fortuna::live::URL;
-use crate::utils::{self, browser::Browser};
+use crate::fortuna::live::{COOKIE_ACCEPT, URL};
+use crate::utils::{browser, download};
 
 pub struct Page(String);
 
-impl utils::download::Download for Browser<Page> {
-    type Output = Result<Page, utils::browser::Error>;
-    type Error = fantoccini::error::CmdError;
+impl download::Download for browser::Browser<Page> {
+    type Output = Result<Page, fantoccini::error::CmdError>;
+    type Error = browser::Error;
 
     async fn download(&self) -> Result<Self::Output, Self::Error> {
-        Ok(match utils::browser::client(self.port).await {
-            Ok(client) => Ok(Page(
-                utils::download::download(
-                    client,
-                    format!("{}/sport/LPLTENNIS", URL).as_str(),
-                    fantoccini::Locator::Css(
-                        r#"button[id="cookie-consent-button-accept"]"#,
-                    ),
-                )
-                .await?,
-            )),
-            Err(connect_error) => Err(connect_error),
-        })
+        let cookie_accept = fantoccini::Locator::Css(COOKIE_ACCEPT);
+        let browser = browser::client(self.port).await?;
+        let url = format!("{}/sport/LPLTENNIS", URL);
+        let page = download::run(browser, url.as_str(), cookie_accept).await;
+        Ok(page.map(Page))
     }
 }
 
