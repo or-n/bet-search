@@ -1,7 +1,3 @@
-pub trait Name {
-    const NAME: &'static str;
-}
-
 pub type Odds = Vec<Result<f32, String>>;
 
 pub struct Teams {

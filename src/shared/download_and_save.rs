@@ -1,30 +1,29 @@
-use crate::utils::{self, browser::Browser, download::Download};
+use super::book;
+use crate::utils::{browser, download, page, save};
+use download::Download;
 
 #[derive(Debug)]
 pub enum Error<'a> {
-    Browser(utils::browser::Error),
+    Browser(browser::Error),
     Download(fantoccini::error::CmdError),
     Extract(&'a str, super::book::Error),
     SaveHTML(std::io::Error),
     SaveSportBets(std::io::Error),
 }
 
-pub async fn run<Book, Page>(port: u16) -> Result<(), Error<'static>>
+pub async fn run<Page>(port: u16) -> Result<(), Error<'static>>
 where
-    Book: super::book::Name,
-    Browser<Book>: Download<
-        // Output = Result<Page, utils::browser::Error>,
-        // Error = fantoccini::error::CmdError,
+    browser::Browser<Page>: download::Download<
         Output = Result<Page, fantoccini::error::CmdError>,
-        Error = utils::browser::Error,
+        Error = browser::Error,
     >,
-    Page: super::book::SportBets + super::book::Subpages + ToString,
+    Page: page::Name + book::SportBets + book::Subpages + ToString,
 {
-    let result = Browser::new(port).download().await;
+    let result = browser::Browser::new(port).download().await;
     let html = result.map_err(Error::Browser)?.map_err(Error::Download)?;
-    utils::save::save(
+    save::save(
         html.to_string().as_bytes(),
-        format!("downloads/{}.html", Book::NAME),
+        format!("downloads/{}.html", Page::NAME),
     )
     .map_err(Error::SaveHTML)?;
     // let sport_bets = html
@@ -34,9 +33,9 @@ where
     //     .into_iter()
     //     .map(|(teams, odds)| format!("{:?}\n{:?}\n", teams, odds))
     //     .collect::<Vec<_>>();
-    utils::save::save(
+    save::save(
         html.subpages().join("\n").as_bytes(),
-        format!("downloads/{}.txt", Book::NAME),
+        format!("downloads/{}.txt", Page::NAME),
     )
     .map_err(Error::SaveSportBets)?;
     Ok(())

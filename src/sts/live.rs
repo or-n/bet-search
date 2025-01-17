@@ -1,5 +1,5 @@
 use crate::shared::{book, sport_bets};
-use crate::utils::{browser, download};
+use crate::utils::{browser, download, page};
 
 const URL: &str = "https://www.sts.pl/live";
 const COOKIE_ACCEPT: &str =
@@ -7,7 +7,7 @@ const COOKIE_ACCEPT: &str =
 
 pub struct Page(String);
 
-impl download::Download for browser::Browser<super::Book> {
+impl download::Download for browser::Browser<Page> {
     type Output = Result<Page, fantoccini::error::CmdError>;
     type Error = browser::Error;
 
@@ -23,6 +23,10 @@ impl ToString for Page {
     fn to_string(&self) -> String {
         self.0.clone()
     }
+}
+
+impl page::Name for Page {
+    const NAME: &'static str = "sts.live";
 }
 
 use book::Error;
