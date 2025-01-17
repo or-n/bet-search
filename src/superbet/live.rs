@@ -2,20 +2,16 @@ use crate::shared::{book, sport_bets};
 use crate::utils::{browser, download, page};
 
 pub const URL: &str = "https://superbet.pl/zaklady-bukmacherskie/live";
+pub const COOKIE_ACCEPT: &str = r#"button[id="onetrust-accept-btn-handler"]"#;
 
 pub struct Page(String);
 
 impl download::Download for browser::Browser<Page> {
-    type Output = Result<Page, fantoccini::error::CmdError>;
+    type Output = Page;
     type Error = browser::Error;
 
     async fn download(&self) -> Result<Self::Output, Self::Error> {
-        let cookie_accept = fantoccini::Locator::Css(
-            r#"button[id="onetrust-accept-btn-handler"]"#,
-        );
-        let browser = browser::client(self.port).await?;
-        let page = download::run(browser, URL, cookie_accept).await;
-        Ok(page.map(Page))
+        self.run(URL, COOKIE_ACCEPT).await.map(Page)
     }
 }
 

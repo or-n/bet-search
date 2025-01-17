@@ -13,14 +13,12 @@ pub enum Error<'a> {
 
 pub async fn run<Page>(port: u16) -> Result<(), Error<'static>>
 where
-    browser::Browser<Page>: download::Download<
-        Output = Result<Page, fantoccini::error::CmdError>,
-        Error = browser::Error,
-    >,
+    browser::Browser<Page>:
+        download::Download<Output = Page, Error = browser::Error>,
     Page: page::Name + book::SportBets + book::Subpages + ToString,
 {
     let result = browser::Browser::new(port).download().await;
-    let html = result.map_err(Error::Browser)?.map_err(Error::Download)?;
+    let html = result.map_err(Error::Browser)?;
     save::save(
         html.to_string().as_bytes(),
         format!("downloads/{}.html", Page::NAME),

@@ -10,14 +10,11 @@ const URL: &str = "https://live.efortuna.pl/";
 const COOKIE_ACCEPT: &str = r#"button[id="cookie-consent-button-accept"]"#;
 
 impl download::Download for browser::Browser<Page> {
-    type Output = Result<Page, fantoccini::error::CmdError>;
+    type Output = Page;
     type Error = browser::Error;
 
     async fn download(&self) -> Result<Self::Output, Self::Error> {
-        let cookie_accept = fantoccini::Locator::Css(COOKIE_ACCEPT);
-        let browser = browser::client(self.port).await?;
-        let page = download::run(browser, URL, cookie_accept).await;
-        Ok(page.map(Page))
+        self.run(URL, COOKIE_ACCEPT).await.map(Page)
     }
 }
 
