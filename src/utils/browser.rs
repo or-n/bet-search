@@ -1,49 +1,60 @@
-use fantoccini::ClientBuilder;
-use std::marker::PhantomData;
+// use std::process::{Child, Command};
 use std::time::Duration;
 use tokio::time::sleep;
 
-#[derive(Debug)]
-pub enum Error {
-    NewSessionError {
-        port: u16,
-        error: fantoccini::error::NewSessionError,
-    },
-    Cmd(fantoccini::error::CmdError),
+pub trait Download<T>:
+    super::download::Download<
+    fantoccini::Client,
+    T,
+    Error = fantoccini::error::CmdError,
+>
+{
 }
 
-pub async fn client(port: u16) -> Result<fantoccini::Client, Error> {
-    ClientBuilder::native()
+impl<T, Data> Download<Data> for T where
+    T: super::download::Download<
+        fantoccini::Client,
+        Data,
+        Error = fantoccini::error::CmdError,
+    >
+{
+}
+
+// #[derive(Debug)]
+// pub enum Error {
+//     Spawn(std::io::Error),
+//     NewSession {
+//         port: u16,
+//         error: fantoccini::error::NewSessionError,
+//     },
+//     Cmd(fantoccini::error::CmdError),
+// }
+
+// pub fn spawn(port: u16) -> std::io::Result<Child> {
+//     Command::new("geckodriver")
+//         .arg("--port")
+//         .arg(port.to_string())
+//         .spawn()
+// }
+
+pub async fn connect(
+    port: u16,
+) -> Result<fantoccini::Client, fantoccini::error::NewSessionError> {
+    // spawn(port).map_err(Error::Spawn)?;
+    // use serde_json::{json, Map, Value};
+    // let mut caps = Map::new();
+    // caps.insert(
+    //     "moz:firefoxOptions".to_string(),
+    //     json!({ "args": ["-headless"] }),
+    // );
+    fantoccini::ClientBuilder::native()
+        // .capabilities(caps)
         .connect(format!("http://localhost:{}", port).as_str())
         .await
-        .map_err(|error| Error::NewSessionError { port, error })
 }
 
-pub struct Browser<T> {
-    pub port: u16,
-    _marker: PhantomData<T>,
-}
-
-impl<T> Browser<T> {
-    pub fn new(port: u16) -> Self {
-        Browser {
-            port,
-            _marker: PhantomData,
-        }
-    }
-
-    pub async fn run(
-        &self,
-        url: &str,
-        cookie_accept: &str,
-    ) -> Result<String, Error> {
-        let client = client(self.port).await?;
-        cmd(client, url, cookie_accept).await.map_err(Error::Cmd)
-    }
-}
-
-pub async fn cmd(
-    client: fantoccini::Client,
+pub async fn download_html(
+    client: &mut fantoccini::Client,
     url: &str,
     cookie_accept: &str,
 ) -> Result<String, fantoccini::error::CmdError> {
@@ -58,14 +69,12 @@ pub async fn cmd(
                 cookie_accepted = true;
                 false
             }
-            _ = sleep(Duration::from_millis(1000)) => {
+            _ = sleep(Duration::from_millis(600)) => {
                 true
             }
         };
         if exit {
-            let html = client.source().await?;
-            client.close().await?;
-            return Ok(html);
+            return client.source().await;
         }
     }
 }

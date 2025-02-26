@@ -1,26 +1,25 @@
-pub mod sport_bets;
+// pub mod sport_bets;
 pub mod subpages;
 pub mod tenis;
 
-use crate::utils::{browser, download, page};
+use crate::utils::{browser, download, page, page::Tag};
 
-pub struct Page(String);
+const URL: &str = "https://live.efortuna.pl";
 
-const URL: &str = "https://live.efortuna.pl/";
-const COOKIE_ACCEPT: &str = r#"button[id="cookie-consent-button-accept"]"#;
+#[derive(Debug)]
+pub struct Page;
 
-impl download::Download for browser::Browser<Page> {
-    type Output = Page;
-    type Error = browser::Error;
+impl download::Download<fantoccini::Client, String> for Tag<Page, String> {
+    type Error = fantoccini::error::CmdError;
 
-    async fn download(&self) -> Result<Self::Output, Self::Error> {
-        self.run(URL, COOKIE_ACCEPT).await.map(Page)
-    }
-}
-
-impl ToString for Page {
-    fn to_string(&self) -> String {
-        self.0.clone()
+    async fn download(
+        client: &mut fantoccini::Client,
+        data: String,
+    ) -> Result<Self, Self::Error> {
+        let url = format!("{URL}/{data}");
+        browser::download_html(client, url.as_str(), super::COOKIE_ACCEPT)
+            .await
+            .map(Tag::new)
     }
 }
 

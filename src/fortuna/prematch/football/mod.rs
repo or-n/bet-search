@@ -1,5 +1,6 @@
-use crate::fortuna::{live::URL, COOKIE_ACCEPT};
-use crate::utils::{browser, download, page::Tag};
+use crate::utils::{browser::download_html, download, page::Tag};
+
+const URL: &str = "/zaklady-bukmacherskie/pilka-nozna";
 
 pub struct Page;
 
@@ -10,8 +11,8 @@ impl download::Download<fantoccini::Client, ()> for Tag<Page, String> {
         client: &mut fantoccini::Client,
         _data: (),
     ) -> Result<Self, Self::Error> {
-        let url = format!("{}/sports/LPLTENNIS", URL);
-        browser::download_html(client, url.as_str(), COOKIE_ACCEPT)
+        let url = format!("{}{}", super::URL, URL);
+        download_html(client, url.as_str(), super::super::COOKIE_ACCEPT)
             .await
             .map(Tag::new)
     }

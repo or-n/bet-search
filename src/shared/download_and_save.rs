@@ -1,40 +1,49 @@
-use super::book;
-use crate::utils::{browser, download, page, save};
+use crate::utils::{
+    browser, download,
+    page::{Name, Tag},
+    save::save,
+};
 use download::Download;
+use thiserror::Error;
 
-#[derive(Debug)]
-pub enum Error<'a> {
-    Browser(browser::Error),
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Download({0})")]
     Download(fantoccini::error::CmdError),
-    Extract(&'a str, super::book::Error),
+    #[error("SaveHTML({0})")]
     SaveHTML(std::io::Error),
-    SaveSportBets(std::io::Error),
 }
 
-pub async fn run<Page>(port: u16) -> Result<(), Error<'static>>
+pub async fn run<Page>(
+    client: &mut fantoccini::Client,
+) -> Result<Tag<Page, String>, Error>
 where
-    browser::Browser<Page>:
-        download::Download<Output = Page, Error = browser::Error>,
-    Page: page::Name + book::SportBets + book::Subpages + ToString,
+    Page: Name,
+    Tag<Page, String>: browser::Download<String>,
 {
-    let result = browser::Browser::new(port).download().await;
-    let html = result.map_err(Error::Browser)?;
-    save::save(
-        html.to_string().as_bytes(),
-        format!("downloads/{}.html", Page::NAME),
-    )
-    .map_err(Error::SaveHTML)?;
-    // let sport_bets = html
-    //     .sport_bets()
-    //     .map_err(|error| Error::Extract(Book::NAME, error))?;
-    // let lines = sport_bets
-    //     .into_iter()
-    //     .map(|(teams, odds)| format!("{:?}\n{:?}\n", teams, odds))
-    //     .collect::<Vec<_>>();
-    save::save(
-        html.subpages().join("\n").as_bytes(),
-        format!("downloads/{}.txt", Page::NAME),
-    )
-    .map_err(Error::SaveSportBets)?;
-    Ok(())
+    let download = Tag::<Page, String>::download(client, "".to_string());
+    let html = download.await.map_err(Error::Download)?;
+    let file = format!("downloads/{}.html", Page::NAME);
+    save(html.inner().as_bytes(), file).map_err(Error::SaveHTML)?;
+    Ok(html)
 }
+
+// pub async fn run_subpages<Page>(
+//     client: &mut fantoccini::Client,
+//     subpages: Vec<String>,
+// ) -> Result<(), Error>
+// where
+//     Page: Name,
+//     Tag<Page, String>: browser::Download<String>,
+// {
+//     for subpage in subpages {
+//         println!("{}", subpage);
+//         let download = Tag::<Page, String>::download(client, subpage.clone());
+//         let html = download.await.map_err(Error::Download)?;
+//         if let Some((_, rest)) = subpage.split_once("/mecz/") {
+//             let file = format!("downloads/{}_{}.html", Page::NAME, rest);
+//             save(html.inner().as_bytes(), file).map_err(Error::SaveHTML)?;
+//         }
+//     }
+//     Ok(())
+// }

@@ -1,6 +1,8 @@
-pub trait Download {
-    type Output;
+pub trait Download<Client, Data>: Sized {
     type Error;
 
-    async fn download(&self) -> Result<Self::Output, Self::Error>;
+    async fn download(
+        client: &mut Client,
+        data: Data,
+    ) -> Result<Self, Self::Error>;
 }

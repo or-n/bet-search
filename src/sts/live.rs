@@ -7,11 +7,10 @@ const COOKIE_ACCEPT: &str =
 
 pub struct Page(String);
 
-impl download::Download for browser::Browser<Page> {
-    type Output = Page;
+impl download::Download<Page, ()> for browser::Browser {
     type Error = browser::Error;
 
-    async fn download(&self) -> Result<Self::Output, Self::Error> {
+    async fn download(&self, _data: ()) -> Result<Page, Self::Error> {
         self.run(URL, COOKIE_ACCEPT).await.map(Page)
     }
 }
