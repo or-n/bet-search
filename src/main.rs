@@ -9,11 +9,13 @@ use shared::book::Subpages;
 
 #[tokio::main]
 async fn main() {
+    use shared::download_and_save::{run, run_subpages};
     let mut client = utils::browser::connect(4444).await.unwrap();
-    use shared::download_and_save::run;
-    let result = run::<fortuna::live::Page>(&mut client).await;
+    let result = run(&mut client, fortuna::live::Page).await;
     let html = result.unwrap();
-    println!("{:?}", html.subpages());
-    // let _ = run_subpages(&mut client, html.subpages()).await;
+    let subpages = html.subpages();
+    let _ =
+        run_subpages::<fortuna::live::subpages::Page>(&mut client, subpages)
+            .await;
     client.close().await.unwrap();
 }

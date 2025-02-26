@@ -2,27 +2,28 @@
 pub mod subpages;
 pub mod tenis;
 
-use crate::utils::{browser, download, page, page::Tag};
+use crate::utils::{browser, download::Download, page, page::Tag};
 
 const URL: &str = "https://live.efortuna.pl";
 
 #[derive(Debug)]
 pub struct Page;
 
-impl download::Download<fantoccini::Client, String> for Tag<Page, String> {
+impl Download<fantoccini::Client, ()> for Tag<Page, String> {
     type Error = fantoccini::error::CmdError;
 
     async fn download(
         client: &mut fantoccini::Client,
-        data: String,
+        _data: (),
     ) -> Result<Self, Self::Error> {
-        let url = format!("{URL}/{data}");
-        browser::download_html(client, url.as_str(), super::COOKIE_ACCEPT)
-            .await
-            .map(Tag::new)
+        client.goto(URL).await?;
+        browser::try_accepting_cookie(client, super::COOKIE_ACCEPT).await?;
+        client.source().await.map(Tag::new)
     }
 }
 
 impl page::Name for Page {
-    const NAME: &'static str = "fortuna.live";
+    fn name(&self) -> String {
+        "fortuna.live".to_string()
+    }
 }

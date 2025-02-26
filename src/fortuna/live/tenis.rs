@@ -11,8 +11,8 @@ impl download::Download<fantoccini::Client, ()> for Tag<Page, String> {
         _data: (),
     ) -> Result<Self, Self::Error> {
         let url = format!("{}/sports/LPLTENNIS", URL);
-        browser::download_html(client, url.as_str(), COOKIE_ACCEPT)
-            .await
-            .map(Tag::new)
+        client.goto(url.as_str()).await?;
+        browser::try_accepting_cookie(client, COOKIE_ACCEPT).await?;
+        client.source().await.map(Tag::new)
     }
 }

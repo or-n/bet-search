@@ -14,5 +14,5 @@ impl<PhantomT, T: Clone> Tag<PhantomT, T> {
 }
 
 pub trait Name {
-    const NAME: &'static str;
+    fn name(&self) -> String;
 }

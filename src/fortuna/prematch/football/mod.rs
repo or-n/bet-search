@@ -1,10 +1,11 @@
-use crate::utils::{browser::download_html, download, page::Tag};
+use crate::fortuna::COOKIE_ACCEPT;
+use crate::utils::{browser, download::Download, page::Tag};
 
 const URL: &str = "/zaklady-bukmacherskie/pilka-nozna";
 
 pub struct Page;
 
-impl download::Download<fantoccini::Client, ()> for Tag<Page, String> {
+impl Download<fantoccini::Client, ()> for Tag<Page, String> {
     type Error = fantoccini::error::CmdError;
 
     async fn download(
@@ -12,8 +13,8 @@ impl download::Download<fantoccini::Client, ()> for Tag<Page, String> {
         _data: (),
     ) -> Result<Self, Self::Error> {
         let url = format!("{}{}", super::URL, URL);
-        download_html(client, url.as_str(), super::super::COOKIE_ACCEPT)
-            .await
-            .map(Tag::new)
+        client.goto(url.as_str()).await?;
+        browser::try_accepting_cookie(client, COOKIE_ACCEPT).await?;
+        client.source().await.map(Tag::new)
     }
 }

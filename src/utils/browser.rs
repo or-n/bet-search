@@ -1,22 +1,15 @@
 // use std::process::{Child, Command};
+use fantoccini::{error::CmdError, Client, Locator};
 use std::time::Duration;
 use tokio::time::sleep;
 
 pub trait Download<T>:
-    super::download::Download<
-    fantoccini::Client,
-    T,
-    Error = fantoccini::error::CmdError,
->
+    super::download::Download<Client, T, Error = CmdError>
 {
 }
 
 impl<T, Data> Download<Data> for T where
-    T: super::download::Download<
-        fantoccini::Client,
-        Data,
-        Error = fantoccini::error::CmdError,
-    >
+    T: super::download::Download<Client, Data, Error = CmdError>
 {
 }
 
@@ -39,7 +32,7 @@ impl<T, Data> Download<Data> for T where
 
 pub async fn connect(
     port: u16,
-) -> Result<fantoccini::Client, fantoccini::error::NewSessionError> {
+) -> Result<Client, fantoccini::error::NewSessionError> {
     // spawn(port).map_err(Error::Spawn)?;
     // use serde_json::{json, Map, Value};
     // let mut caps = Map::new();
@@ -53,28 +46,17 @@ pub async fn connect(
         .await
 }
 
-pub async fn download_html(
-    client: &mut fantoccini::Client,
-    url: &str,
+pub async fn try_accepting_cookie(
+    client: &mut Client,
     cookie_accept: &str,
-) -> Result<String, fantoccini::error::CmdError> {
-    client.goto(url).await?;
-    let mut cookie_accepted = false;
-    let cookie_accept = fantoccini::Locator::Css(cookie_accept);
-    loop {
-        let exit = tokio::select! {
-            accept = client.wait().for_element(cookie_accept),
-            if !cookie_accepted => {
-                accept?.click().await?;
-                cookie_accepted = true;
-                false
-            }
-            _ = sleep(Duration::from_millis(600)) => {
-                true
-            }
-        };
-        if exit {
-            return client.source().await;
+) -> Result<bool, CmdError> {
+    tokio::select! {
+        accept = client.wait().for_element(Locator::Css(cookie_accept)) => {
+            accept?.click().await?;
+            Ok(true)
+        }
+        _ = sleep(Duration::from_millis(2000)) => {
+            Ok(false)
         }
     }
 }

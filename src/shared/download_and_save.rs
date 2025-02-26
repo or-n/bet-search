@@ -4,6 +4,7 @@ use crate::utils::{
     save::save,
 };
 use download::Download;
+use std::fmt::Debug;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -16,34 +17,34 @@ pub enum Error {
 
 pub async fn run<Page>(
     client: &mut fantoccini::Client,
+    page: Page,
 ) -> Result<Tag<Page, String>, Error>
 where
     Page: Name,
-    Tag<Page, String>: browser::Download<String>,
+    Tag<Page, String>: browser::Download<()>,
 {
-    let download = Tag::<Page, String>::download(client, "".to_string());
+    let download = Tag::<Page, String>::download(client, ());
     let html = download.await.map_err(Error::Download)?;
-    let file = format!("downloads/{}.html", Page::NAME);
+    let file = format!("downloads/{}.html", page.name());
     save(html.inner().as_bytes(), file).map_err(Error::SaveHTML)?;
     Ok(html)
 }
 
-// pub async fn run_subpages<Page>(
-//     client: &mut fantoccini::Client,
-//     subpages: Vec<String>,
-// ) -> Result<(), Error>
-// where
-//     Page: Name,
-//     Tag<Page, String>: browser::Download<String>,
-// {
-//     for subpage in subpages {
-//         println!("{}", subpage);
-//         let download = Tag::<Page, String>::download(client, subpage.clone());
-//         let html = download.await.map_err(Error::Download)?;
-//         if let Some((_, rest)) = subpage.split_once("/mecz/") {
-//             let file = format!("downloads/{}_{}.html", Page::NAME, rest);
-//             save(html.inner().as_bytes(), file).map_err(Error::SaveHTML)?;
-//         }
-//     }
-//     Ok(())
-// }
+pub async fn run_subpages<Page>(
+    client: &mut fantoccini::Client,
+    subpages: Vec<Page>,
+) -> Result<(), Error>
+where
+    Page: Name + Clone,
+    Tag<Page, String>: browser::Download<Page>,
+{
+    for subpage in subpages.iter() {
+        println!("{}", subpage.name());
+        let download = Tag::<Page, String>::download(client, subpage.clone());
+        let html = download.await.map_err(Error::Download)?;
+        let file = format!("downloads/{}.html", subpage.name());
+        save(html.inner().as_bytes(), file).map_err(Error::SaveHTML)?;
+    }
+    println!("done {}", subpages.len());
+    Ok(())
+}
