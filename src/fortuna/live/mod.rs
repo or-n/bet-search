@@ -6,15 +6,15 @@ use crate::utils::{browser, download::Download, page, page::Tag};
 
 const URL: &str = "https://live.efortuna.pl";
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Page;
 
-impl Download<fantoccini::Client, ()> for Tag<Page, String> {
+impl Download<fantoccini::Client, Page> for Tag<Page, String> {
     type Error = fantoccini::error::CmdError;
 
     async fn download(
         client: &mut fantoccini::Client,
-        _data: (),
+        _data: Page,
     ) -> Result<Self, Self::Error> {
         client.goto(URL).await?;
         browser::try_accepting_cookie(client, super::COOKIE_ACCEPT).await?;

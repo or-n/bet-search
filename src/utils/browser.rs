@@ -1,5 +1,5 @@
 // use std::process::{Child, Command};
-use fantoccini::{error::CmdError, Client, Locator};
+use fantoccini::{error::CmdError, Client, ClientBuilder, Locator};
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -30,20 +30,11 @@ impl<T, Data> Download<Data> for T where
 //         .spawn()
 // }
 
-pub async fn connect(
-    port: u16,
-) -> Result<Client, fantoccini::error::NewSessionError> {
-    // spawn(port).map_err(Error::Spawn)?;
-    // use serde_json::{json, Map, Value};
-    // let mut caps = Map::new();
-    // caps.insert(
-    //     "moz:firefoxOptions".to_string(),
-    //     json!({ "args": ["-headless"] }),
-    // );
-    fantoccini::ClientBuilder::native()
-        // .capabilities(caps)
+pub async fn connect(port: u16) -> Client {
+    ClientBuilder::native()
         .connect(format!("http://localhost:{}", port).as_str())
         .await
+        .unwrap()
 }
 
 pub async fn try_accepting_cookie(
