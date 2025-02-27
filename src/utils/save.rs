@@ -1,8 +1,9 @@
-use std::io::Write;
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 
-pub fn save<P>(content: &[u8], path: P) -> std::io::Result<()>
+pub async fn save<P>(content: &[u8], path: P) -> std::io::Result<()>
 where
     P: AsRef<std::path::Path>,
 {
-    std::fs::File::create(path)?.write_all(content)
+    File::create(path).await?.write_all(content).await
 }

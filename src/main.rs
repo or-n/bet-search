@@ -64,7 +64,7 @@ async fn main() {
         if !contents.is_empty() {
             let file = format!("downloads/{}", subpage.name());
             let f = format!("{}\n\n{}", subpage.url(), contents);
-            let _ = save(f.as_bytes(), file);
+            let _ = save(f.as_bytes(), file).await;
         }
     }
     client.close().await.unwrap();
