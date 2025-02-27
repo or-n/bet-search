@@ -187,6 +187,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "eat"
+version = "0.1.0"
+source = "git+https://github.com/or-n/rust-minimalist-utils.git#956454eebae76a1c35a23ca63eb43ae238e6fdcd"
+
+[[package]]
 name = "ego-tree"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -763,6 +768,7 @@ dependencies = [
 name = "odds"
 version = "0.1.0"
 dependencies = [
+ "eat",
  "fantoccini",
  "futures",
  "scraper",

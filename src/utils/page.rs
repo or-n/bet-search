@@ -13,6 +13,17 @@ impl<PhantomT, T: Clone> Tag<PhantomT, T> {
     }
 }
 
+impl<PhantomT> Tag<PhantomT, String> {
+    pub fn document(&self) -> Tag<PhantomT, scraper::Html> {
+        let html = scraper::Html::parse_document(&self.inner());
+        Tag(PhantomData, html)
+    }
+}
+
 pub trait Name {
     fn name(&self) -> String;
+}
+
+pub trait Url {
+    fn url(&self) -> String;
 }
