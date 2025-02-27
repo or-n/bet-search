@@ -79,6 +79,15 @@ impl Tag<Page, Html> {
             })
             .collect()
     }
+
+    pub fn date(&self) -> String {
+        let date = Selector::parse("span.event-datetime").unwrap();
+        self.inner()
+            .select(&date)
+            .next()
+            .map(|a| clean_text(a.text()))
+            .unwrap()
+    }
 }
 
 #[derive(Debug, Clone)]

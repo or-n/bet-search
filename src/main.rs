@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex;
 use utils::{
-    browser,
+    browser, date,
     download::Download,
     page::{Name, Tag, Url},
     save::save,
@@ -35,9 +35,13 @@ async fn main() {
     while let Some(subpage) = queue.lock().await.pop() {
         println!("{}", subpage.url());
         let html = Tag::download(&mut client, subpage.clone()).await.unwrap();
-        let events = html.document().events();
+        let document = html.document();
+        let match_date = date::eat(&document.date()).unwrap();
+        if !date::in_days(match_date, 4) {
+            continue;
+        }
         let mut contents = String::new();
-        for event in events {
+        for event in document.events() {
             let safe_odds: Vec<_> = event
                 .odds
                 .iter()
