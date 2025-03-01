@@ -53,19 +53,31 @@ async fn main() {
         .await
         .unwrap();
     let subpages = html.document().subpages();
+    let total_count = subpages.len();
     let queue = Arc::new(Mutex::new(subpages));
+    println!("Elapsed time: {:.2?}", start.elapsed());
+    let start = Instant::now();
+    let mut download_count = 0;
+    let mut save_count = 0;
     while let Some((subpage, date)) = queue.lock().await.pop() {
         if !date::in_days(date, 1) {
             continue;
         }
         let html = Tag::download(&mut client, subpage.clone()).await.unwrap();
+        download_count += 1;
         let Some(contents) = contents(html.document()) else {
             continue;
         };
         let file = format!("downloads/{}", subpage.name());
         let f = format!("{}\n\n{}", subpage.url(), contents);
         let _ = save(f.as_bytes(), file).await;
+        save_count += 1;
     }
     client.close().await.unwrap();
-    println!("Elapsed time: {:.2?}", start.elapsed());
+    let elapsed = start.elapsed().as_secs_f32();
+    println!("Elapsed time: {:.2?}", elapsed);
+    println!("Total count: {}", total_count);
+    println!("Download count: {}", download_count);
+    println!("Save count: {}", save_count);
+    println!("{:.2?} / download", elapsed / download_count as f32);
 }
