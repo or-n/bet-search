@@ -1,22 +1,17 @@
-mod shared;
-mod utils;
-
-mod fortuna;
-// mod sts;
-// mod superbet;
-
 use eat::*;
 use fortuna::prematch::football::EventType;
-use shared::book::Subpages;
-use std::sync::Arc;
-use std::time::Instant;
-use tokio::sync::Mutex;
-use utils::{
+use odds::fortuna;
+use odds::shared;
+use odds::utils::{
     browser, date,
     download::Download,
     page::{Name, Tag, Url},
     save::save,
 };
+use shared::book::Subpages;
+use std::sync::Arc;
+use std::time::Instant;
+use tokio::sync::Mutex;
 
 fn in_range(x: f32, range: [f32; 2]) -> bool {
     x >= range[0] && x <= range[1]
