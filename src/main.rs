@@ -32,14 +32,13 @@ async fn main() {
         .unwrap();
     let subpages = html.document().subpages();
     let queue = Arc::new(Mutex::new(subpages));
-    while let Some(subpage) = queue.lock().await.pop() {
+    while let Some((subpage, date)) = queue.lock().await.pop() {
+        if !date::in_days(date, 1) {
+            continue;
+        }
         println!("{}", subpage.url());
         let html = Tag::download(&mut client, subpage.clone()).await.unwrap();
         let document = html.document();
-        let match_date = date::eat(&document.date()).unwrap();
-        if !date::in_days(match_date, 4) {
-            continue;
-        }
         let mut contents = String::new();
         for event in document.events() {
             let safe_odds: Vec<_> = event

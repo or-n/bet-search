@@ -26,7 +26,7 @@ impl Download<Client, Page> for Tag<Page, String> {
         client.goto(url.as_str()).await?;
         browser::try_accepting_cookie(client, COOKIE_ACCEPT).await?;
         let mut previous_count = 0;
-        let mut new_count = 0;
+        let mut new_count;
         let scroll = "window.scrollTo(0, document.body.scrollHeight);";
         loop {
             let elements = client.find_all(Locator::Css(".event-link")).await?;

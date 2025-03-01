@@ -1,18 +1,33 @@
 use crate::fortuna::prematch::URL;
 use crate::shared::book::Subpages;
 use crate::utils::{
+    date,
     download::Download,
     page::{Name, Tag, Url},
 };
+use chrono::NaiveDateTime;
 use scraper::{ElementRef, Html, Node, Selector};
 
-impl Subpages<Page> for Tag<super::Page, Html> {
-    fn subpages(&self) -> Vec<Page> {
+impl Subpages<(Page, NaiveDateTime)> for Tag<super::Page, Html> {
+    fn subpages(&self) -> Vec<(Page, NaiveDateTime)> {
+        let event = Selector::parse("table.events-table tr").unwrap();
         let subpage = Selector::parse("a.event-link").unwrap();
+        let date = Selector::parse("span.event-datetime").unwrap();
         self.inner()
-            .select(&subpage)
-            .filter_map(|element| element.value().attr("href"))
-            .map(|href| Page(href.to_string()))
+            .select(&event)
+            .filter_map(|element| {
+                let page: Page = element
+                    .select(&subpage)
+                    .filter_map(|element| element.value().attr("href"))
+                    .next()
+                    .map(|href| Page(href.to_string()))?;
+                let datetime = element
+                    .select(&date)
+                    .next()
+                    .map(|a| clean_text(a.text()))?;
+                let d = date::eat(&datetime).unwrap();
+                Some((page, d))
+            })
             .collect()
     }
 }
@@ -80,7 +95,7 @@ impl Tag<Page, Html> {
             .collect()
     }
 
-    pub fn date(&self) -> String {
+    pub fn _date(&self) -> String {
         let date = Selector::parse("span.event-datetime").unwrap();
         self.inner()
             .select(&date)
