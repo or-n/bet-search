@@ -1,5 +1,6 @@
 use eat::*;
-use fortuna::prematch::football::EventType;
+use football::EventType;
+use fortuna::prematch::football;
 use odds::fortuna;
 use odds::shared;
 use odds::utils::{
@@ -8,13 +9,39 @@ use odds::utils::{
     page::{Name, Tag, Url},
     save::save,
 };
+use scraper::Html;
 use shared::book::Subpages;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex;
 
-fn in_range(x: f32, range: [f32; 2]) -> bool {
-    x >= range[0] && x <= range[1]
+fn contents(document: Tag<football::subpage::Page, Html>) -> Option<String> {
+    let Some(players) = document.players() else {
+        return None;
+    };
+    println!("{} - {}", players[0], players[1]);
+    let events = document.events().into_iter().filter_map(|event| {
+        let safe_odds = event
+            .odds
+            .into_iter()
+            .filter(|(_, x)| *x >= 3.1 && *x <= 3.3);
+        if safe_odds.clone().peekable().peek().is_none() {
+            return None;
+        }
+        let (rest, event_type) =
+            EventType::eat(event.name.as_str(), ()).unwrap();
+        if rest != "" || matches!(event_type, EventType::Unknown(_)) {
+            return None;
+        }
+        let safe_odds: Vec<_> =
+            safe_odds.map(|pair| format!("{:?}", pair)).collect();
+        Some(format!("{}\n{}", event.name, safe_odds.join("\n")))
+    });
+    let events: Vec<_> = events.collect();
+    if events.is_empty() {
+        return None;
+    }
+    Some(events.join("\n"))
 }
 
 #[tokio::main]
@@ -32,38 +59,12 @@ async fn main() {
             continue;
         }
         let html = Tag::download(&mut client, subpage.clone()).await.unwrap();
-        let document = html.document();
-        if let Some(players) = document.players() {
-            println!("{} - {}", players[0], players[1]);
-        } else {
+        let Some(contents) = contents(html.document()) else {
             continue;
-        }
-        let mut contents = String::new();
-        for event in document.events() {
-            let safe_odds: Vec<_> = event
-                .odds
-                .iter()
-                .filter(|pair| in_range(pair.1, [3.1, 3.3]))
-                .collect();
-            if let Ok(("", event_type)) =
-                EventType::eat(event.name.as_str(), ())
-            {
-                if !safe_odds.is_empty()
-                    && !matches!(event_type, EventType::Unknown(_))
-                {
-                    contents.push_str(&format!("{}\n", event.name));
-                    for pair in safe_odds {
-                        contents.push_str(&format!("{:?}\n", pair));
-                    }
-                    contents.push_str("\n");
-                }
-            }
-        }
-        if !contents.is_empty() {
-            let file = format!("downloads/{}", subpage.name());
-            let f = format!("{}\n\n{}", subpage.url(), contents);
-            let _ = save(f.as_bytes(), file).await;
-        }
+        };
+        let file = format!("downloads/{}", subpage.name());
+        let f = format!("{}\n\n{}", subpage.url(), contents);
+        let _ = save(f.as_bytes(), file).await;
     }
     client.close().await.unwrap();
     println!("Elapsed time: {:.2?}", start.elapsed());
