@@ -36,9 +36,13 @@ async fn main() {
         if !date::in_days(date, 1) {
             continue;
         }
-        println!("{}", subpage.url());
         let html = Tag::download(&mut client, subpage.clone()).await.unwrap();
         let document = html.document();
+        if let Some(players) = document.players() {
+            println!("{} - {}", players[0], players[1]);
+        } else {
+            continue;
+        }
         let mut contents = String::new();
         for event in document.events() {
             let safe_odds: Vec<_> = event

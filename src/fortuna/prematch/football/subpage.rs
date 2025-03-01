@@ -60,6 +60,23 @@ fn main_text(element: ElementRef) -> String {
 }
 
 impl Tag<Page, Html> {
+    pub fn players(&self) -> Option<[String; 2]> {
+        let event_name = Selector::parse("span.event-name").unwrap();
+        let name = self
+            .inner()
+            .select(&event_name)
+            .next()
+            .map(|x| clean_text(x.text()))
+            .unwrap();
+        let parts: Vec<_> = name.split(" - ").collect();
+        if parts.len() != 2 {
+            return None;
+        }
+        let player1 = parts[0].to_string();
+        let player2 = parts[1].to_string();
+        Some([player1, player2])
+    }
+
     pub fn events(&self) -> Vec<Event> {
         let market = Selector::parse("div.market").unwrap();
         let name = Selector::parse("h3 > a").unwrap();
