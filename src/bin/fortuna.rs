@@ -21,20 +21,20 @@ fn contents(document: Tag<football::subpage::Page, Html>) -> Option<String> {
     };
     println!("{} - {}", players[0], players[1]);
     let events = document.events().into_iter().filter_map(|event| {
-        let safe_odds = event
-            .odds
-            .into_iter()
-            .filter(|(_, x)| *x >= 3.1 && *x <= 3.3);
-        if safe_odds.clone().peekable().peek().is_none() {
-            return None;
-        }
         let (rest, event_type) =
             EventType::eat(event.name.as_str(), ()).unwrap();
         if rest != "" || matches!(event_type, EventType::Unknown(_)) {
             return None;
         }
-        let safe_odds: Vec<_> =
-            safe_odds.map(|pair| format!("{:?}", pair)).collect();
+        let safe_odds: Vec<_> = event
+            .odds
+            .into_iter()
+            .filter(|(_, x)| *x >= 3.1 && *x <= 3.3)
+            .map(|pair| format!("{:?}", pair))
+            .collect();
+        if safe_odds.is_empty() {
+            return None;
+        }
         Some(format!("{}\n{}", event.name, safe_odds.join("\n")))
     });
     let events: Vec<_> = events.collect();
