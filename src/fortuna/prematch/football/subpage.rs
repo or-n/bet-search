@@ -4,9 +4,10 @@ use crate::utils::{
     date,
     download::Download,
     page::{Name, Tag, Url},
+    scrape::{clean_text, main_text, split2},
 };
 use chrono::NaiveDateTime;
-use scraper::{ElementRef, Html, Node, Selector};
+use scraper::{Html, Selector};
 
 impl Subpages<(Page, NaiveDateTime)> for Tag<super::Page, Html> {
     fn subpages(&self) -> Vec<(Page, NaiveDateTime)> {
@@ -38,27 +39,6 @@ pub struct Event {
     pub odds: Vec<(String, f32)>,
 }
 
-fn clean_text(texts: scraper::element_ref::Text) -> String {
-    texts
-        .map(|t| t.trim())
-        .filter(|t| !t.is_empty())
-        .collect::<Vec<&str>>()
-        .join(" ")
-}
-
-fn main_text(element: ElementRef) -> String {
-    element
-        .first_child()
-        .and_then(|node| {
-            if let Node::Text(text) = node.value() {
-                Some(text.trim().to_string())
-            } else {
-                None
-            }
-        })
-        .unwrap_or_default()
-}
-
 impl Tag<Page, Html> {
     pub fn players(&self) -> Option<[String; 2]> {
         let event_name = Selector::parse("span.event-name").unwrap();
@@ -68,13 +48,7 @@ impl Tag<Page, Html> {
             .next()
             .map(|x| clean_text(x.text()))
             .unwrap();
-        let parts: Vec<_> = name.split(" - ").collect();
-        if parts.len() != 2 {
-            return None;
-        }
-        let player1 = parts[0].to_string();
-        let player2 = parts[1].to_string();
-        Some([player1, player2])
+        split2(name, " - ")
     }
 
     pub fn events(&self) -> Vec<Event> {
