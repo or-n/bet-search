@@ -13,6 +13,10 @@ impl<T, Data> Download<Data> for T where
 {
 }
 
+pub const ENTER: &str = "\u{E007}";
+pub const _TAB: &str = "\u{E004}";
+pub const _ESC: &str = "\u{E00C}";
+
 // #[derive(Debug)]
 // pub enum Error {
 //     Spawn(std::io::Error),
