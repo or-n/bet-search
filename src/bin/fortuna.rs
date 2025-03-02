@@ -1,5 +1,4 @@
 use eat::*;
-use football::EventType;
 use fortuna::prematch::football;
 use odds::fortuna;
 use odds::shared;
@@ -10,7 +9,7 @@ use odds::utils::{
     save::save,
 };
 use scraper::Html;
-use shared::book::Subpages;
+use shared::{book::Subpages, event};
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex;
@@ -22,8 +21,8 @@ fn contents(document: Tag<football::subpage::Page, Html>) -> Option<String> {
     println!("{} - {}", players[0], players[1]);
     let events = document.events().into_iter().filter_map(|event| {
         let (rest, event_type) =
-            EventType::eat(event.name.as_str(), ()).unwrap();
-        if rest != "" || matches!(event_type, EventType::Unknown(_)) {
+            event::Football::eat(event.name.as_str(), players.clone()).unwrap();
+        if rest != "" || matches!(event_type, event::Football::Unknown(_)) {
             return None;
         }
         let safe_odds: Vec<_> = event

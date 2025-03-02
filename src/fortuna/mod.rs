@@ -1,3 +1,4 @@
+pub mod event;
 pub mod live;
 pub mod prematch;
 // pub mod team;

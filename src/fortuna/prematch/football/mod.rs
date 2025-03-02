@@ -6,7 +6,6 @@ use crate::utils::{
     download::Download,
     page::{Name, Tag},
 };
-use eat::*;
 use fantoccini::{error::CmdError, Client, Locator};
 use tokio::time::{sleep, Duration};
 
@@ -47,72 +46,5 @@ impl Download<Client, Page> for Tag<Page, String> {
 impl Name for Page {
     fn name(&self) -> String {
         "fortuna.football".to_string()
-    }
-}
-
-pub enum EventType {
-    Goals,
-    GoalsH1,
-    GoalsH2,
-    ExactGoals,
-    ExactGoalsH1,
-    ExactGoalsH2,
-    BothToScore,
-    BothToScoreH1,
-    BothToScoreH2,
-    Handicap,
-    HandicapH1,
-    HandicapH2,
-    H1,
-    H2,
-    Unknown(String),
-}
-
-impl Eat<&str, (), ()> for EventType {
-    fn eat(i: &str, _data: ()) -> Result<(&str, Self), ()> {
-        use EventType::*;
-        if let Ok(i) = "Liczba goli".drop(i) {
-            return Ok((i, Goals));
-        }
-        if let Ok(i) = "1.połowa liczba goli".drop(i) {
-            return Ok((i, GoalsH1));
-        }
-        if let Ok(i) = "2.połowa liczba goli".drop(i) {
-            return Ok((i, GoalsH2));
-        }
-        if let Ok(i) = "Dokładna liczba goli".drop(i) {
-            return Ok((i, ExactGoals));
-        }
-        if let Ok(i) = "1.połowa: dokładna liczba goli".drop(i) {
-            return Ok((i, ExactGoalsH1));
-        }
-        if let Ok(i) = "2.połowa: dokładna liczba goli".drop(i) {
-            return Ok((i, ExactGoalsH2));
-        }
-        if let Ok(i) = "Obie drużyny strzelą gola".drop(i) {
-            return Ok((i, BothToScore));
-        }
-        if let Ok(i) = "Obie drużyny strzelą gola w 1.połowie".drop(i) {
-            return Ok((i, BothToScoreH1));
-        }
-        if let Ok(i) = "Obie drużyny strzelą gola w 2.połowie".drop(i) {
-            return Ok((i, BothToScoreH2));
-        }
-        if let Ok(i) = "Handicap".drop(i) {
-            return Ok((i, Handicap));
-        }
-        if let Ok(i) = "1.połowa: handicap".drop(i) {
-            return Ok((i, HandicapH1));
-        }
-        if let Ok(i) = "2.połowa: handicap".drop(i) {
-            return Ok((i, HandicapH2));
-        }
-        if let Ok(i) = "1.połowa".drop(i) {
-            return Ok((i, H1));
-        }
-        if let Ok(i) = "2.połowa".drop(i) {
-            return Ok((i, H2));
-        }
-        Ok(("", Unknown(i.to_string())))
     }
 }
