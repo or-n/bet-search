@@ -5,43 +5,33 @@ impl Eat<&str, (), [String; 2]> for event::Football {
     fn eat(i: &str, [p1, p2]: [String; 2]) -> Result<(&str, Self), ()> {
         use event::Football::*;
         if let Ok(i) = p1.as_str().drop(i) {
-            if let Ok(i) = " liczba goli".drop(i) {
-                return Ok((i, GoalsP1));
+            if let Ok(result) = eat_p1(i) {
+                return Ok(result);
             }
-            if let Ok(i) = " 1.połowa liczba goli".drop(i) {
-                return Ok((i, GoalsP1H1));
+        }
+        if let Ok(i) = "1.druzyna".drop(i) {
+            if let Ok(result) = eat_p1(i) {
+                return Ok(result);
             }
-            if let Ok(i) = " 2.połowa liczba goli".drop(i) {
-                return Ok((i, GoalsP1H2));
-            }
-            if let Ok(i) = " liczba rzutów rożnych".drop(i) {
-                return Ok((i, CornersP1));
-            }
-            if let Ok(i) = " 1.połowa liczba rzutów rożnych".drop(i) {
-                return Ok((i, CornersP1H1));
-            }
-            if let Ok(i) = " 2.połowa liczba rzutów rożnych".drop(i) {
-                return Ok((i, CornersP1H2));
+        }
+        if let Ok(i) = "1.drużyna".drop(i) {
+            if let Ok(result) = eat_p1(i) {
+                return Ok(result);
             }
         }
         if let Ok(i) = p2.as_str().drop(i) {
-            if let Ok(i) = " liczba goli".drop(i) {
-                return Ok((i, GoalsP2));
+            if let Ok(result) = eat_p2(i) {
+                return Ok(result);
             }
-            if let Ok(i) = " 1.połowa liczba goli".drop(i) {
-                return Ok((i, GoalsP2H1));
+        }
+        if let Ok(i) = "2.druzyna".drop(i) {
+            if let Ok(result) = eat_p2(i) {
+                return Ok(result);
             }
-            if let Ok(i) = " 2.połowa liczba goli".drop(i) {
-                return Ok((i, GoalsP2H2));
-            }
-            if let Ok(i) = " liczba rzutów rożnych".drop(i) {
-                return Ok((i, CornersP2));
-            }
-            if let Ok(i) = " 1.połowa liczba rzutów rożnych".drop(i) {
-                return Ok((i, CornersP2H1));
-            }
-            if let Ok(i) = " 2.połowa liczba rzutów rożnych".drop(i) {
-                return Ok((i, CornersP2H2));
+        }
+        if let Ok(i) = "2.drużyna".drop(i) {
+            if let Ok(result) = eat_p2(i) {
+                return Ok(result);
             }
         }
         if let Ok(i) = "Liczba rzutów rożnych".drop(i) {
@@ -97,4 +87,50 @@ impl Eat<&str, (), [String; 2]> for event::Football {
         }
         Ok(("", Unknown(i.to_string())))
     }
+}
+
+fn eat_p1(i: &str) -> Result<(&str, event::Football), ()> {
+    use event::Football::*;
+    if let Ok(i) = " liczba goli".drop(i) {
+        return Ok((i, GoalsP1));
+    }
+    if let Ok(i) = " 1.połowa liczba goli".drop(i) {
+        return Ok((i, GoalsP1H1));
+    }
+    if let Ok(i) = " 2.połowa liczba goli".drop(i) {
+        return Ok((i, GoalsP1H2));
+    }
+    if let Ok(i) = " liczba rzutów rożnych".drop(i) {
+        return Ok((i, CornersP1));
+    }
+    if let Ok(i) = " 1.połowa liczba rzutów rożnych".drop(i) {
+        return Ok((i, CornersP1H1));
+    }
+    if let Ok(i) = " 2.połowa liczba rzutów rożnych".drop(i) {
+        return Ok((i, CornersP1H2));
+    }
+    Err(())
+}
+
+fn eat_p2(i: &str) -> Result<(&str, event::Football), ()> {
+    use event::Football::*;
+    if let Ok(i) = " liczba goli".drop(i) {
+        return Ok((i, GoalsP2));
+    }
+    if let Ok(i) = " 1.połowa liczba goli".drop(i) {
+        return Ok((i, GoalsP2H1));
+    }
+    if let Ok(i) = " 2.połowa liczba goli".drop(i) {
+        return Ok((i, GoalsP2H2));
+    }
+    if let Ok(i) = " liczba rzutów rożnych".drop(i) {
+        return Ok((i, CornersP2));
+    }
+    if let Ok(i) = " 1.połowa liczba rzutów rożnych".drop(i) {
+        return Ok((i, CornersP2H1));
+    }
+    if let Ok(i) = " 2.połowa liczba rzutów rożnych".drop(i) {
+        return Ok((i, CornersP2H2));
+    }
+    Err(())
 }

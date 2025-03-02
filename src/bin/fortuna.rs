@@ -22,7 +22,18 @@ fn contents(document: Tag<football::subpage::Page, Html>) -> Option<String> {
     let events = document.events().into_iter().filter_map(|event| {
         let (rest, event_type) =
             event::Football::eat(event.name.as_str(), players.clone()).unwrap();
-        if rest != "" || matches!(event_type, event::Football::Unknown(_)) {
+        use event::Football::*;
+        if rest != ""
+            || !matches!(
+                event_type,
+                CornersP1
+                    | CornersP1H1
+                    | CornersP1H2
+                    | CornersP2
+                    | CornersP2H1
+                    | CornersP2H2
+            )
+        {
             return None;
         }
         let safe_odds: Vec<_> = event
