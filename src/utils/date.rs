@@ -14,7 +14,7 @@ pub fn eat(i: &str) -> Option<NaiveDateTime> {
     Some(date2)
 }
 
-pub fn in_days(date: NaiveDateTime, n: i64) -> bool {
+pub fn in_hours(date: NaiveDateTime, n: i64) -> bool {
     let now = Local::now().naive_local();
-    date <= now + Duration::days(n)
+    date <= now + Duration::hours(n)
 }

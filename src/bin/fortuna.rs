@@ -1,4 +1,3 @@
-use eat::*;
 use fortuna::prematch::football;
 use odds::fortuna;
 use odds::shared;
@@ -9,7 +8,7 @@ use odds::utils::{
     save::save,
 };
 use scraper::Html;
-use shared::{book::Subpages, event};
+use shared::book::Subpages;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex;
@@ -20,38 +19,23 @@ fn contents(document: Tag<football::subpage::Page, Html>) -> Option<String> {
     };
     println!("{} - {}", players[0], players[1]);
     let events = document.events().into_iter().filter_map(|event| {
-        let (rest, event_type) =
-            event::Football::eat(event.name.as_str(), players.clone()).unwrap();
-        use event::Football::*;
-        if rest != ""
-            || !matches!(
-                event_type,
-                CornersP1
-                    | CornersP1H1
-                    | CornersP1H2
-                    | CornersP2
-                    | CornersP2H1
-                    | CornersP2H2
-            )
-        {
-            return None;
-        }
-        let safe_odds: Vec<_> = event
+        let odds: Vec<_> = event
             .odds
             .into_iter()
-            .filter(|(_, x)| *x >= 3.1 && *x <= 3.3)
             .map(|pair| format!("{:?}", pair))
             .collect();
-        if safe_odds.is_empty() {
-            return None;
-        }
-        Some(format!("{}\n{}", event.name, safe_odds.join("\n")))
+        Some(format!("{}\n{}", event.name, odds.join("\n")))
     });
     let events: Vec<_> = events.collect();
     if events.is_empty() {
         return None;
     }
-    Some(events.join("\n"))
+    Some(format!(
+        "{}\n{}\n\n{}",
+        players[0],
+        players[1],
+        events.join("\n\n")
+    ))
 }
 
 #[tokio::main]
@@ -59,9 +43,7 @@ async fn main() {
     let start = Instant::now();
     let mut client = browser::connect(4444).await;
     let page = fortuna::prematch::football::Page;
-    let html = shared::download_and_save::run(&mut client, page)
-        .await
-        .unwrap();
+    let html = Tag::download(&mut client, page).await.unwrap();
     let subpages = html.document().subpages();
     let total_count = subpages.len();
     let queue = Arc::new(Mutex::new(subpages));
@@ -70,7 +52,7 @@ async fn main() {
     let mut download_count = 0;
     let mut save_count = 0;
     while let Some((subpage, date)) = queue.lock().await.pop() {
-        if !date::in_days(date, 1) {
+        if !date::in_hours(date, 12) {
             continue;
         }
         let html = Tag::download(&mut client, subpage.clone()).await.unwrap();

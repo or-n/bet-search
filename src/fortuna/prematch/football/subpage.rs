@@ -1,5 +1,5 @@
 use crate::fortuna::prematch::URL;
-use crate::shared::book::Subpages;
+use crate::shared::{book::Subpages, event::Event};
 use crate::utils::{
     date,
     download::Download,
@@ -31,12 +31,6 @@ impl Subpages<(Page, NaiveDateTime)> for Tag<super::Page, Html> {
             })
             .collect()
     }
-}
-
-#[derive(Debug)]
-pub struct Event {
-    pub name: String,
-    pub odds: Vec<(String, f32)>,
 }
 
 impl Tag<Page, Html> {
