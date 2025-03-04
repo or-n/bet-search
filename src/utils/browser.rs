@@ -1,6 +1,5 @@
 // use std::process::{Child, Command};
-use fantoccini::{error::CmdError, Client, ClientBuilder, Locator};
-use serde_json::{Map, Value};
+use fantoccini::{error::CmdError, Client, Locator};
 use std::time::Duration;
 use tokio::time::sleep;
 

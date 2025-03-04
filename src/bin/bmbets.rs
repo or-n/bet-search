@@ -1,5 +1,9 @@
 use fantoccini::ClientBuilder;
-use odds::bmbets::search::{find_match, hits};
+use odds::bmbets::{
+    menu,
+    search::{find_match, hits},
+    URL,
+};
 use odds::shared::event;
 use odds::utils::browser;
 use scraper::Html;
@@ -9,8 +13,6 @@ use std::io;
 use std::io::Write;
 use std::time::Instant;
 use tokio::time::{sleep, Duration};
-
-const URL: &str = "https://www.bmbets.com";
 
 fn get_id() -> usize {
     loop {
@@ -64,11 +66,19 @@ async fn main() {
     io::stdout().flush().unwrap();
     let id = get_id();
     let (players, relative_url) = &hits[id];
-    let url = format!("{}{}", URL, relative_url);
+    let match_url = format!("{}{}", URL, relative_url);
     println!("{} - {}", players[0], players[1]);
-    println!("{}", url);
-    client.goto(&url).await.unwrap();
-    sleep(Duration::from_secs(2)).await;
+    println!("{}", match_url);
+    client.goto(&match_url).await.unwrap();
+    let menu_list = menu::list(&mut client).await.unwrap();
+    if menu_list.len() < 2 {
+        println!("menu list len < 2");
+        return;
+    }
+    let (name, menu_button) = &menu_list[1];
+    println!("{}", name);
+    menu_button.click().await.unwrap();
+    sleep(Duration::from_secs(5)).await;
     client.close().await.unwrap();
     println!("Elapsed time: {:.2?}", start.elapsed());
 }

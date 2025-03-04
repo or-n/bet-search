@@ -1,3 +1,4 @@
+pub mod menu;
 pub mod search;
 
-const URL: &str = "https://www.bmbets.com/value-bets";
+pub const URL: &str = "https://www.bmbets.com";

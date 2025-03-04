@@ -1,4 +1,4 @@
-use crate::utils::{browser, scrape::split2};
+use crate::utils::scrape::split2;
 use eat::*;
 
 #[derive(Debug)]
