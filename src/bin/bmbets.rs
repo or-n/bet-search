@@ -1,6 +1,7 @@
+use eat::*;
 use fantoccini::ClientBuilder;
 use odds::bmbets::{
-    menu,
+    football, menu,
     search::{find_match, hits},
     URL,
 };
@@ -78,6 +79,17 @@ async fn main() {
     let (name, menu_button) = &menu_list[1];
     println!("{}", name);
     menu_button.click().await.unwrap();
+    let toolbar_list = menu::list_toolbar(&mut client).await.unwrap();
+    let toolbar_list: Vec<_> = toolbar_list
+        .into_iter()
+        .filter_map(|(name, button)| {
+            let (_, toolbar) = football::Toolbar::eat(&name, ()).ok()?;
+            Some((toolbar, button))
+        })
+        .collect();
+    for (toolbar, _) in toolbar_list {
+        println!("{:?}", toolbar);
+    }
     sleep(Duration::from_secs(5)).await;
     client.close().await.unwrap();
     println!("Elapsed time: {:.2?}", start.elapsed());
