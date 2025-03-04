@@ -1,5 +1,6 @@
 // use std::process::{Child, Command};
 use fantoccini::{error::CmdError, Client, ClientBuilder, Locator};
+use serde_json::{Map, Value};
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -34,11 +35,8 @@ pub const _ESC: &str = "\u{E00C}";
 //         .spawn()
 // }
 
-pub async fn connect(port: u16) -> Client {
-    ClientBuilder::native()
-        .connect(format!("http://localhost:{}", port).as_str())
-        .await
-        .unwrap()
+pub fn localhost(port: u16) -> String {
+    format!("http://localhost:{}", port)
 }
 
 pub async fn try_accepting_cookie(

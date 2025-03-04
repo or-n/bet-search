@@ -58,9 +58,9 @@ pub struct Event {
 
 #[derive(Debug)]
 pub struct Match {
-    url: String,
-    players: [String; 2],
-    events: Vec<Event>,
+    pub url: String,
+    pub players: [String; 2],
+    pub events: Vec<Event>,
 }
 
 pub fn eat_match(i: &str) -> Result<Match, ()> {

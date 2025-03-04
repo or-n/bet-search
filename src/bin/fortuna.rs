@@ -1,3 +1,4 @@
+use fantoccini::ClientBuilder;
 use fortuna::prematch::football;
 use odds::fortuna;
 use odds::shared;
@@ -41,7 +42,10 @@ fn contents(document: Tag<football::subpage::Page, Html>) -> Option<String> {
 #[tokio::main]
 async fn main() {
     let start = Instant::now();
-    let mut client = browser::connect(4444).await;
+    let mut client = ClientBuilder::native()
+        .connect(&browser::localhost(4444))
+        .await
+        .unwrap();
     let page = fortuna::prematch::football::Page;
     let html = Tag::download(&mut client, page).await.unwrap();
     let subpages = html.document().subpages();

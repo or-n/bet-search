@@ -6,10 +6,13 @@ use fantoccini::{error::CmdError, Client, Locator};
 use scraper::{Element, Html, Selector};
 use tokio::time::{sleep, Duration};
 
-pub async fn find_match(client: &mut Client) -> Result<String, CmdError> {
+pub async fn find_match(
+    client: &mut Client,
+    match_name: &str,
+) -> Result<String, CmdError> {
     client.goto(super::URL).await?;
     let search_input = client.find(Locator::Id("search")).await?;
-    search_input.send_keys("Real").await?;
+    search_input.send_keys(match_name).await?;
     search_input.send_keys(browser::ENTER).await?;
     sleep(Duration::from_secs(2)).await;
     client.source().await
