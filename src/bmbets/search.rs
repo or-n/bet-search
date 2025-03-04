@@ -11,9 +11,9 @@ pub async fn find_match(
     match_name: &str,
 ) -> Result<String, CmdError> {
     client.goto(super::URL).await?;
-    let search_input = client.find(Locator::Id("search")).await?;
-    search_input.send_keys(match_name).await?;
-    search_input.send_keys(browser::ENTER).await?;
+    let search = client.find(Locator::Id("search")).await?;
+    search.send_keys(match_name).await?;
+    search.send_keys(browser::ENTER).await?;
     sleep(Duration::from_secs(2)).await;
     client.source().await
 }

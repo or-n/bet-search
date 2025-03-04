@@ -51,19 +51,19 @@ fn eat_pair(i: &str) -> Result<(&str, (String, String)), ()> {
 }
 
 #[derive(Debug)]
-pub struct Event {
-    pub name: String,
+pub struct Event<T> {
+    pub id: T,
     pub odds: Vec<(String, f32)>,
 }
 
 #[derive(Debug)]
-pub struct Match {
+pub struct Match<EventId> {
     pub url: String,
     pub players: [String; 2],
-    pub events: Vec<Event>,
+    pub events: Vec<Event<EventId>>,
 }
 
-pub fn eat_match(i: &str) -> Result<Match, ()> {
+pub fn eat_match(i: &str) -> Result<Match<String>, ()> {
     let parts: Vec<_> = i.split("\n\n").collect();
     let url = parts[0].to_string();
     let players = split2(parts[1].to_string(), "\n").ok_or(())?;
@@ -77,10 +77,8 @@ pub fn eat_match(i: &str) -> Result<Match, ()> {
                 Some((name, value))
             })
             .collect();
-        Some(Event {
-            name: lines[0].to_string(),
-            odds,
-        })
+        let id = lines[0].to_string();
+        Some(Event { id, odds })
     });
     Ok(Match {
         url,

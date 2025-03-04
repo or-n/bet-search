@@ -1,4 +1,5 @@
 use eat::*;
+use event::{Event, Match};
 use fantoccini::ClientBuilder;
 use odds::bmbets::{
     football, menu,
@@ -25,6 +26,39 @@ fn get_id() -> usize {
     }
 }
 
+fn fortuna_football(
+    event: Event<String>,
+    players: [String; 2],
+) -> Option<Event<event::Football>> {
+    if let Ok(("", id)) = event::Football::eat(&event.id, players) {
+        return Some(Event {
+            id,
+            odds: event.odds,
+        });
+    }
+    None
+}
+
+fn safe_event<T>(event: Event<T>) -> Option<Event<T>> {
+    let odds: Vec<_> = event
+        .odds
+        .into_iter()
+        .filter(|(_, x)| *x >= 3.1 && *x <= 3.3)
+        .collect();
+    if odds.is_empty() {
+        return None;
+    }
+    Some(event::Event { odds, ..event })
+}
+
+fn safe_match<T>(m: Match<T>) -> Option<Match<T>> {
+    let events: Vec<_> = m.events.into_iter().filter_map(safe_event).collect();
+    if events.is_empty() {
+        return None;
+    }
+    Some(event::Match { events, ..m })
+}
+
 #[tokio::main]
 async fn main() {
     let entries = fs::read_dir("downloads").unwrap();
@@ -34,6 +68,22 @@ async fn main() {
         let contents = fs::read_to_string(&path).unwrap();
         event::eat_match(&contents).ok()
     });
+    let matches = matches.filter_map(safe_match);
+    let matches = matches.filter_map(|m| {
+        let events: Vec<_> = m
+            .events
+            .into_iter()
+            .filter_map(|event| fortuna_football(event, m.players.clone()))
+            .collect();
+        if events.is_empty() {
+            return None;
+        }
+        Some(event::Match {
+            events,
+            url: m.url,
+            players: m.players,
+        })
+    });
     let matches: Vec<_> = matches.collect();
     if matches.is_empty() {
         println!("no matches");
@@ -42,6 +92,9 @@ async fn main() {
     let id = 0;
     let m = &matches[id];
     println!("{} - {}", m.players[0], m.players[1]);
+    for event in &m.events {
+        println!("{:?}", event);
+    }
     let start = Instant::now();
     let caps = json!({
         "moz:firefoxOptions": {},

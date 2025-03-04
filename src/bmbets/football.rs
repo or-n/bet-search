@@ -18,7 +18,7 @@ pub enum Tabs {
 }
 
 impl Eat<&str, (), ()> for Tabs {
-    fn eat(i: &str, data: ()) -> Result<(&str, Self), ()> {
+    fn eat(i: &str, _data: ()) -> Result<(&str, Self), ()> {
         use Tabs::*;
         if let Ok(i) = "1x2".drop(i) {
             return Ok((i, Winner));
@@ -87,7 +87,7 @@ pub enum Toolbar {
 }
 
 impl Eat<&str, (), ()> for Toolbar {
-    fn eat(i: &str, data: ()) -> Result<(&str, Self), ()> {
+    fn eat(i: &str, _data: ()) -> Result<(&str, Self), ()> {
         use Toolbar::*;
         if let Ok(i) = "Full Time".drop(i) {
             return Ok((i, FullTime));

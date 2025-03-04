@@ -45,7 +45,7 @@ impl Tag<Page, Html> {
         split2(name, " - ")
     }
 
-    pub fn events(&self) -> Vec<Event> {
+    pub fn events(&self) -> Vec<Event<String>> {
         let market = Selector::parse("div.market").unwrap();
         let name = Selector::parse("h3 > a").unwrap();
         let odds = Selector::parse("div.odds a").unwrap();
@@ -75,7 +75,7 @@ impl Tag<Page, Html> {
                         }
                     })
                     .collect();
-                Event { name, odds }
+                Event { id: name, odds }
             })
             .collect()
     }
