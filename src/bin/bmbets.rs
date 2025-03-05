@@ -106,6 +106,7 @@ async fn main() {
         .connect(&browser::localhost(4444))
         .await
         .unwrap();
+    println!("search: {}", m.players[0]);
     let html = find_match(&mut client, &m.players[0]).await.unwrap();
     let document = Html::parse_document(&html);
     let hits = hits(document);

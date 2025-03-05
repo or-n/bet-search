@@ -68,22 +68,19 @@ pub enum Toolbar {
     FullTime,
     FirstHalf,
     SecondHalf,
-    Winner,
-    WinnerFirstHalf,
-    WinnerSecondHalf,
-    AsianHandicap,
-    AsianHandicapFirstHalf,
-    AsianHandicapSecondHalf,
-    Total,
-    TotalFirstHalf,
-    TotalSecondHalf,
+    Winner(Part),
+    AsianHandicap(Part),
+    Total(Part),
     DoubleChance,
-    HomeTotal,
-    HomeTotalFirstHalf,
-    HomeTotalSecondHalf,
-    AwayTotal,
-    AwayTotalFirstHalf,
-    AwayTotalSecondHalf,
+    HomeTotal(Part),
+    AwayTotal(Part),
+}
+
+#[derive(Debug)]
+pub enum Part {
+    FullTime,
+    FirstHalf,
+    SecondHalf,
 }
 
 impl Eat<&str, (), ()> for Toolbar {
@@ -99,53 +96,41 @@ impl Eat<&str, (), ()> for Toolbar {
             return Ok((i, SecondHalf));
         }
         if let Ok(i) = "1x2".drop(i) {
-            return Ok((i, Winner));
-        }
-        if let Ok(i) = "1x2 (H1)".drop(i) {
-            return Ok((i, WinnerFirstHalf));
-        }
-        if let Ok(i) = "1x2 (H2)".drop(i) {
-            return Ok((i, WinnerSecondHalf));
+            let (i, part) = Part::eat(i, ())?;
+            return Ok((i, Winner(part)));
         }
         if let Ok(i) = "Asian Handicap".drop(i) {
-            return Ok((i, AsianHandicap));
-        }
-        if let Ok(i) = "Asian Handicap (H1)".drop(i) {
-            return Ok((i, AsianHandicapFirstHalf));
-        }
-        if let Ok(i) = "Asian Handicap (H2)".drop(i) {
-            return Ok((i, AsianHandicapSecondHalf));
+            let (i, part) = Part::eat(i, ())?;
+            return Ok((i, AsianHandicap(part)));
         }
         if let Ok(i) = "Total".drop(i) {
-            return Ok((i, Total));
-        }
-        if let Ok(i) = "Total (H1)".drop(i) {
-            return Ok((i, TotalFirstHalf));
-        }
-        if let Ok(i) = "Total (H2)".drop(i) {
-            return Ok((i, TotalSecondHalf));
+            let (i, part) = Part::eat(i, ())?;
+            return Ok((i, Total(part)));
         }
         if let Ok(i) = "Double Chance".drop(i) {
             return Ok((i, DoubleChance));
         }
         if let Ok(i) = "Home Total".drop(i) {
-            return Ok((i, HomeTotal));
-        }
-        if let Ok(i) = "Home Total (H1)".drop(i) {
-            return Ok((i, HomeTotalFirstHalf));
-        }
-        if let Ok(i) = "Home Total (H2)".drop(i) {
-            return Ok((i, HomeTotalSecondHalf));
+            let (i, part) = Part::eat(i, ())?;
+            return Ok((i, HomeTotal(part)));
         }
         if let Ok(i) = "Away Total".drop(i) {
-            return Ok((i, AwayTotal));
-        }
-        if let Ok(i) = "Away Total (H1)".drop(i) {
-            return Ok((i, AwayTotalFirstHalf));
-        }
-        if let Ok(i) = "Away Total (H2)".drop(i) {
-            return Ok((i, AwayTotalSecondHalf));
+            let (i, part) = Part::eat(i, ())?;
+            return Ok((i, AwayTotal(part)));
         }
         Err(())
+    }
+}
+
+impl Eat<&str, (), ()> for Part {
+    fn eat(i: &str, _data: ()) -> Result<(&str, Self), ()> {
+        use Part::*;
+        if let Ok(i) = " (H1)".drop(i) {
+            return Ok((i, FirstHalf));
+        }
+        if let Ok(i) = " (H2)".drop(i) {
+            return Ok((i, SecondHalf));
+        }
+        Ok((i, FullTime))
     }
 }

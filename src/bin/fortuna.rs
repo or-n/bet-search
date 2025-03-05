@@ -25,7 +25,7 @@ fn contents(document: Tag<football::subpage::Page, Html>) -> Option<String> {
             .into_iter()
             .map(|pair| format!("{:?}", pair))
             .collect();
-        Some(format!("{}\n{}", event.name, odds.join("\n")))
+        Some(format!("{}\n{}", event.id, odds.join("\n")))
     });
     let events: Vec<_> = events.collect();
     if events.is_empty() {
