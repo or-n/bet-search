@@ -59,7 +59,7 @@ fn safe_match<T>(m: Match<T>) -> Option<Match<T>> {
     Some(event::Match { events, ..m })
 }
 
-async fn get_matches() -> Vec<Match<event::Football>> {
+async fn get_safe_matches() -> Vec<Match<event::Football>> {
     let entries = fs::read_dir("downloads").unwrap();
     let matches = entries.filter_map(|entry| {
         let entry = entry.unwrap();
@@ -102,9 +102,40 @@ async fn get_match(client: &mut Client, prompt: &str) -> Option<Hit> {
     Some(hits[id].clone())
 }
 
+async fn goto_event(
+    client: &mut Client,
+    e: &Event<event::Football>,
+) -> Option<()> {
+    let menu_list = menu::list(client).await.ok()?;
+    let mut menu_list = menu_list.into_iter().filter_map(|(name, button)| {
+        let (_, x) = Tab::eat(&name, ()).ok()?;
+        Some((x, button))
+    });
+    let event_tab = tab(&e.id)?;
+    println!("tab {:?}", event_tab);
+    let (_tab, menu_button) = menu_list.find(|(tab, _)| *tab == event_tab)?;
+    println!("found");
+    menu_button.click().await.ok()?;
+    println!("clicked");
+    let toolbar_list = menu::list_toolbar(client).await.ok()?;
+    let mut toolbar_list =
+        toolbar_list.into_iter().filter_map(|(name, button)| {
+            let (_, toolbar) = Toolbar::eat(&name, ()).ok()?;
+            Some((toolbar, button))
+        });
+    let event_toolbar = toolbar(&e.id)?;
+    println!("toolbar {:?}", event_toolbar);
+    let (_toolbar, toolbar_button) =
+        toolbar_list.find(|(x, _)| *x == event_toolbar)?;
+    println!("found");
+    toolbar_button.click().await.ok()?;
+    println!("clicked");
+    Some(())
+}
+
 #[tokio::main]
 async fn main() {
-    let matches = get_matches().await;
+    let matches = get_safe_matches().await;
     if matches.is_empty() {
         println!("no matches");
         return;
@@ -112,9 +143,6 @@ async fn main() {
     let match_id = 0;
     let m = &matches[match_id];
     println!("{} - {}", m.players[0], m.players[1]);
-    let event_id = 0;
-    let e = &m.events[event_id];
-    println!("{:?}", e);
     let start = Instant::now();
     let caps = json!({
         "moz:firefoxOptions": {},
@@ -131,40 +159,16 @@ async fn main() {
         println!("no hits");
         return;
     };
-    let players = hit.players;
-    let match_url = hit.relative_url;
-    println!("{} - {}", players[0], players[1]);
-    println!("{}", match_url);
-    client.goto(&match_url).await.unwrap();
-    let menu_list = menu::list(&mut client).await.unwrap();
-    let mut menu_list = menu_list.into_iter().filter_map(|(name, button)| {
-        let (_, x) = Tab::eat(&name, ()).ok()?;
-        Some((x, button))
-    });
-    let event_tab = tab(&e.id).unwrap();
-    let Some((tab, menu_button)) = menu_list.find(|(tab, _)| *tab == event_tab)
-    else {
-        println!("tab not found");
-        return;
-    };
-    println!("{:?}", tab);
-    menu_button.click().await.unwrap();
-    let toolbar_list = menu::list_toolbar(&mut client).await.unwrap();
-    let mut toolbar_list =
-        toolbar_list.into_iter().filter_map(|(name, button)| {
-            let (_, toolbar) = Toolbar::eat(&name, ()).ok()?;
-            Some((toolbar, button))
-        });
-    let event_toolbar = toolbar(&e.id).unwrap();
-    let Some((toolbar, toolbar_button)) =
-        toolbar_list.find(|(x, _)| *x == event_toolbar)
-    else {
-        println!("toolbar not found");
-        return;
-    };
-    println!("{:?}", toolbar);
-    toolbar_button.click().await.unwrap();
-    sleep(Duration::from_secs(5)).await;
+    println!("{} - {}", hit.players[0], hit.players[1]);
+    println!("{}", hit.relative_url);
+    println!("Elapsed time: {:.2?}", start.elapsed());
+    let start = Instant::now();
+    client.goto(&hit.relative_url).await.unwrap();
+    for e in &m.events {
+        println!("{:?}", e);
+        let _ = goto_event(&mut client, e).await;
+        // sleep(Duration::from_secs(1)).await;
+    }
     client.close().await.unwrap();
     println!("Elapsed time: {:.2?}", start.elapsed());
 }
