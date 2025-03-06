@@ -41,36 +41,36 @@ pub fn toolbar(event: &event::Football) -> Option<Toolbar> {
     use event::Football::*;
     use Toolbar::*;
     match event {
-        Goals => todo!(),
-        GoalsH1 => todo!(),
-        GoalsH2 => todo!(),
+        Goals => Some(Toolbar::FullTime),
+        GoalsH1 => Some(Toolbar::FirstHalf),
+        GoalsH2 => Some(Toolbar::SecondHalf),
         GoalsP1 => Some(Home(Part::FullTime)),
         GoalsP1H1 => Some(Home(Part::FirstHalf)),
         GoalsP1H2 => Some(Home(Part::SecondHalf)),
         GoalsP2 => Some(Away(Part::FullTime)),
         GoalsP2H1 => Some(Away(Part::FirstHalf)),
         GoalsP2H2 => Some(Away(Part::SecondHalf)),
-        ExactGoals => todo!(),
-        ExactGoalsH1 => todo!(),
-        ExactGoalsH2 => todo!(),
-        BothToScore => todo!(),
-        BothToScoreH1 => todo!(),
-        BothToScoreH2 => todo!(),
-        Handicap => todo!(),
-        HandicapH1 => todo!(),
-        HandicapH2 => todo!(),
-        H1 => todo!(),
-        H2 => todo!(),
-        Corners => todo!(),
-        CornersH1 => todo!(),
-        CornersH2 => todo!(),
-        CornersP1 => todo!(),
-        CornersP1H1 => todo!(),
-        CornersP1H2 => todo!(),
-        CornersP2 => todo!(),
-        CornersP2H1 => todo!(),
-        CornersP2H2 => todo!(),
-        Unknown(_) => todo!(),
+        ExactGoals => Some(Toolbar::FullTime),
+        ExactGoalsH1 => Some(Toolbar::FirstHalf),
+        ExactGoalsH2 => Some(Toolbar::SecondHalf),
+        BothToScore => Some(Toolbar::FullTime),
+        BothToScoreH1 => Some(Toolbar::FirstHalf),
+        BothToScoreH2 => Some(Toolbar::SecondHalf),
+        Handicap => Some(Toolbar::FullTime),
+        HandicapH1 => Some(Toolbar::FirstHalf),
+        HandicapH2 => Some(Toolbar::SecondHalf),
+        H1 => Some(Toolbar::FirstHalf),
+        H2 => Some(Toolbar::SecondHalf),
+        Corners => Some(Total(Part::FullTime)),
+        CornersH1 => Some(Total(Part::FirstHalf)),
+        CornersH2 => Some(Total(Part::SecondHalf)),
+        CornersP1 => Some(HomeTotal(Part::FullTime)),
+        CornersP1H1 => Some(HomeTotal(Part::FirstHalf)),
+        CornersP1H2 => Some(HomeTotal(Part::SecondHalf)),
+        CornersP2 => Some(AwayTotal(Part::FullTime)),
+        CornersP2H1 => Some(AwayTotal(Part::FirstHalf)),
+        CornersP2H2 => Some(AwayTotal(Part::SecondHalf)),
+        Unknown(_) => None,
     }
 }
 
@@ -155,65 +155,62 @@ impl Eat<&str, (), ()> for Toolbar {
             return Ok((i, SecondHalf));
         }
         if let Ok(i) = "1x2".drop(i) {
-            let (i, part) = Part::eat(i, ())?;
+            let (i, part) = Part::eat(i, true)?;
             return Ok((i, Winner(part)));
         }
         if let Ok(i) = "Asian Handicap".drop(i) {
-            let (i, part) = Part::eat(i, ())?;
+            let (i, part) = Part::eat(i, true)?;
             return Ok((i, AsianHandicap(part)));
         }
         if let Ok(i) = "Total".drop(i) {
-            let (i, part) = Part::eat(i, ())?;
+            let (i, part) = Part::eat(i, true)?;
             return Ok((i, Total(part)));
         }
         if let Ok(i) = "Double Chance".drop(i) {
             return Ok((i, DoubleChance));
         }
         if let Ok(i) = "Home Total".drop(i) {
-            let (i, part) = Part::eat(i, ())?;
+            let (i, part) = Part::eat(i, true)?;
             return Ok((i, HomeTotal(part)));
         }
         if let Ok(i) = "Away Total".drop(i) {
-            let (i, part) = Part::eat(i, ())?;
+            let (i, part) = Part::eat(i, true)?;
             return Ok((i, AwayTotal(part)));
         }
         if let Ok(i) = "Home".drop(i) {
-            use Part::*;
-            if let Ok(i) = " FT".drop(i) {
-                return Ok((i, Home(FullTime)));
-            }
-            if let Ok(i) = " H1".drop(i) {
-                return Ok((i, Home(FirstHalf)));
-            }
-            if let Ok(i) = " H2".drop(i) {
-                return Ok((i, Home(SecondHalf)));
-            }
+            let (i, part) = Part::eat(i, false)?;
+            return Ok((i, Home(part)));
         }
         if let Ok(i) = "Away".drop(i) {
-            use Part::*;
-            if let Ok(i) = " FT".drop(i) {
-                return Ok((i, Away(FullTime)));
-            }
-            if let Ok(i) = " H1".drop(i) {
-                return Ok((i, Away(FirstHalf)));
-            }
-            if let Ok(i) = " H2".drop(i) {
-                return Ok((i, Away(SecondHalf)));
-            }
+            let (i, part) = Part::eat(i, false)?;
+            return Ok((i, Away(part)));
         }
         Err(())
     }
 }
 
-impl Eat<&str, (), ()> for Part {
-    fn eat(i: &str, _data: ()) -> Result<(&str, Self), ()> {
+impl Eat<&str, (), bool> for Part {
+    fn eat(i: &str, data: bool) -> Result<(&str, Self), ()> {
         use Part::*;
-        if let Ok(i) = " (H1)".drop(i) {
-            return Ok((i, FirstHalf));
+        if data {
+            if let Ok(i) = " (H1)".drop(i) {
+                return Ok((i, FirstHalf));
+            }
+            if let Ok(i) = " (H2)".drop(i) {
+                return Ok((i, SecondHalf));
+            }
+            Ok((i, FullTime))
+        } else {
+            if let Ok(i) = " FT".drop(i) {
+                return Ok((i, FullTime));
+            }
+            if let Ok(i) = " H1".drop(i) {
+                return Ok((i, FirstHalf));
+            }
+            if let Ok(i) = " H2".drop(i) {
+                return Ok((i, SecondHalf));
+            }
+            Err(())
         }
-        if let Ok(i) = " (H2)".drop(i) {
-            return Ok((i, SecondHalf));
-        }
-        Ok((i, FullTime))
     }
 }
