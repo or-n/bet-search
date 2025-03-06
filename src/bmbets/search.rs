@@ -18,7 +18,13 @@ pub async fn find_match(
     client.source().await
 }
 
-pub fn hits(document: Html) -> Vec<([String; 2], String)> {
+#[derive(Clone)]
+pub struct Hit {
+    pub players: [String; 2],
+    pub relative_url: String,
+}
+
+pub fn hits(document: Html) -> Vec<Hit> {
     let hit = Selector::parse("span.hit").unwrap();
     document
         .select(&hit)
@@ -26,8 +32,11 @@ pub fn hits(document: Html) -> Vec<([String; 2], String)> {
         .filter_map(|a| {
             let text = clean_text(a.text());
             let players = split2(text, " - ")?;
-            let link = a.value().attr("href")?.to_string();
-            Some((players, link))
+            let relative_url = a.value().attr("href")?.to_string();
+            Some(Hit {
+                players,
+                relative_url,
+            })
         })
         .collect()
 }

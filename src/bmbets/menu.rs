@@ -19,7 +19,10 @@ pub async fn list(
 pub async fn list_toolbar(
     client: &mut Client,
 ) -> Result<Vec<(String, Element)>, CmdError> {
-    let toolbar = client.wait().for_element(Locator::Css("#tbar_1")).await?;
+    let toolbar = client
+        .wait()
+        .for_element(Locator::Css(".ui-toolbar"))
+        .await?;
     let links = toolbar.find_all(Locator::Css("a")).await?;
     Ok(join_all(links.into_iter().map(|link| async move {
         let name = link.html(true).await.unwrap_or_else(|_| "".to_string());
