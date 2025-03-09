@@ -1,10 +1,11 @@
 use eat::*;
 use event::{Event, Match};
-use fantoccini::{Client, ClientBuilder};
+use fantoccini::{error::CmdError, Client, ClientBuilder};
 use odds::bmbets::{
     football::{tab, toolbar, Tab, Toolbar},
     menu,
     search::{find_match, hits, Hit},
+    URL,
 };
 use odds::shared::event;
 use odds::utils::browser;
@@ -102,35 +103,53 @@ async fn get_match(client: &mut Client, prompt: &str) -> Option<Hit> {
     Some(hits[id].clone())
 }
 
+#[derive(Debug)]
+enum Error {
+    TabList(CmdError),
+    TabTranslate,
+    TabFind,
+    TabClick(CmdError),
+    ToolbarList(CmdError),
+    ToolbarTranslate,
+    ToolbarFind,
+    ToolbarClick(Toolbar, CmdError),
+    Divs(CmdError),
+}
+
 async fn goto_event(
     client: &mut Client,
     e: &Event<event::Football>,
-) -> Option<()> {
-    let menu_list = menu::list(client).await.ok()?;
-    let mut menu_list = menu_list.into_iter().filter_map(|(name, button)| {
-        let (_, x) = Tab::eat(&name, ()).ok()?;
-        Some((x, button))
+) -> Result<(), Error> {
+    use Error::*;
+    menu::dropdown(client).await.map_err(TabList)?;
+    let tab_element = menu::tab(client).await.map_err(TabList)?;
+    let tab_list = menu::links(tab_element).await.map_err(TabList)?;
+    let mut tab_list = tab_list.into_iter().filter_map(|(name, button)| {
+        let (_, x) = Tab::eat(name.as_str(), ()).ok()?;
+        Some((x, (name, button)))
     });
-    let event_tab = tab(&e.id)?;
-    println!("tab {:?}", event_tab);
-    let (_tab, menu_button) = menu_list.find(|(tab, _)| *tab == event_tab)?;
-    println!("found");
-    menu_button.click().await.ok()?;
-    println!("clicked");
-    let toolbar_list = menu::list_toolbar(client).await.ok()?;
+    let event_tab = tab(&e.id).ok_or(TabTranslate)?;
+    let event_toolbar = toolbar(&e.id).ok_or(ToolbarTranslate)?;
+    let (_tab, (tab_name, tab_button)) =
+        tab_list.find(|(x, _)| *x == event_tab).ok_or(TabFind)?;
+    tab_button.click().await.map_err(TabClick)?;
+    let toolbar = menu::toolbar(client).await.map_err(ToolbarList)?;
+    let toolbar_list = menu::links(toolbar).await.map_err(ToolbarList)?;
     let mut toolbar_list =
         toolbar_list.into_iter().filter_map(|(name, button)| {
-            let (_, toolbar) = Toolbar::eat(&name, ()).ok()?;
-            Some((toolbar, button))
+            let (_, x) = Toolbar::eat(name.as_str(), ()).ok()?;
+            Some((x, (name, button)))
         });
-    let event_toolbar = toolbar(&e.id)?;
-    println!("toolbar {:?}", event_toolbar);
-    let (_toolbar, toolbar_button) =
-        toolbar_list.find(|(x, _)| *x == event_toolbar)?;
-    println!("found");
-    toolbar_button.click().await.ok()?;
-    println!("clicked");
-    Some(())
+    let (toolbar, (toolbar_name, toolbar_button)) = toolbar_list
+        .find(|(x, _)| *x == event_toolbar)
+        .ok_or(ToolbarFind)?;
+    toolbar_button
+        .click()
+        .await
+        .map_err(|x| ToolbarClick(toolbar.clone(), x))?;
+    let divs = menu::odds_divs(client).await.map_err(Divs)?;
+    println!("{:?} {:?} {:?} {}", e, tab_name, toolbar_name, divs.len());
+    Ok(())
 }
 
 #[tokio::main]
@@ -160,14 +179,19 @@ async fn main() {
         return;
     };
     println!("{} - {}", hit.players[0], hit.players[1]);
-    println!("{}", hit.relative_url);
+    println!("{}{}", URL, hit.relative_url);
     println!("Elapsed time: {:.2?}", start.elapsed());
     let start = Instant::now();
     client.goto(&hit.relative_url).await.unwrap();
     for e in &m.events {
-        println!("{:?}", e);
-        let _ = goto_event(&mut client, e).await;
-        // sleep(Duration::from_secs(1)).await;
+        if let event::Football::Unknown(_) = e.id {
+            continue;
+        }
+        if let Err(error) = goto_event(&mut client, e).await {
+            println!("{:?}", e);
+            println!("{:?}", error);
+            return;
+        }
     }
     client.close().await.unwrap();
     println!("Elapsed time: {:.2?}", start.elapsed());

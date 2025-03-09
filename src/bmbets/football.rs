@@ -1,13 +1,16 @@
 use crate::shared::event;
 use eat::*;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Tab {
     Winner,
     AsianHandicap,
     EuropeanHandicap,
     Corners,
-    TotalGoals,
+    TotalsGoals,
+    TotalGoalsByIntervals,
+    TotalGoalsNumberByRange,
+    TotalGoalsBothTeamsToScore,
     DoubleChance,
     Cards,
     IndividualTotalGoals,
@@ -22,7 +25,7 @@ pub fn tab(event: &event::Football) -> Option<Tab> {
     use event::Football::*;
     use Tab::*;
     match event {
-        Goals | GoalsH1 | GoalsH2 => Some(TotalGoals),
+        Goals | GoalsH1 | GoalsH2 => Some(TotalsGoals),
         GoalsP1 | GoalsP1H1 | GoalsP1H2 | GoalsP2 | GoalsP2H1 | GoalsP2H2 => {
             Some(IndividualTotalGoals)
         }
@@ -89,8 +92,17 @@ impl Eat<&str, (), ()> for Tab {
         if let Ok(i) = "Corners".drop(i) {
             return Ok((i, Corners));
         }
-        if let Ok(i) = "Total Goals".drop(i) {
-            return Ok((i, TotalGoals));
+        if let Ok(i) = "Total Goals By Intervals".drop(i) {
+            return Ok((i, TotalGoalsByIntervals));
+        }
+        if let Ok(i) = "Total Goals Number By Range".drop(i) {
+            return Ok((i, TotalGoalsNumberByRange));
+        }
+        if let Ok(i) = "Total Goals/Both Teams To Score".drop(i) {
+            return Ok((i, TotalGoalsBothTeamsToScore));
+        }
+        if let Ok(i) = "Totals Goals".drop(i) {
+            return Ok((i, TotalsGoals));
         }
         if let Ok(i) = "Double Chance".drop(i) {
             return Ok((i, DoubleChance));
@@ -120,7 +132,7 @@ impl Eat<&str, (), ()> for Tab {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Toolbar {
     FullTime,
     FirstHalf,
@@ -135,7 +147,7 @@ pub enum Toolbar {
     Away(Part),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Part {
     FullTime,
     FirstHalf,
