@@ -42,10 +42,51 @@ pub async fn links(list: Element) -> Result<Vec<(String, Element)>, CmdError> {
     }))
     .await)
 }
+pub async fn odds_content(client: &mut Client) -> Result<Element, CmdError> {
+    client.find(Locator::Css("#oddsContent")).await
+}
 
-pub async fn odds_divs(client: &mut Client) -> Result<Vec<Element>, CmdError> {
-    sleep(Duration::from_millis(500)).await;
-    let content = client.find(Locator::Css("#oddsContent")).await?;
+pub async fn odds_divs(
+    content: Element,
+) -> Result<Vec<(String, Element)>, CmdError> {
+    sleep(Duration::from_millis(2000)).await;
     let divs = content.find_all(Locator::Css("div.caption")).await?;
-    Ok(divs.into_iter().collect())
+    let divs = join_all(divs.into_iter().map(|div| async move {
+        let span = div.find(Locator::Css("span.caption-txt")).await?;
+        let name = span.text().await?;
+        Ok::<_, CmdError>((name, div))
+    }));
+    Ok(divs.await.into_iter().flatten().collect())
+}
+
+pub async fn odds_table(
+    div: Element,
+) -> Result<Vec<(String, Vec<f32>)>, CmdError> {
+    let parent = div.find(Locator::XPath("..")).await?;
+    let bmdiv = parent.find(Locator::Css(".bmdiv")).await?;
+    let parent = bmdiv.find(Locator::XPath("..")).await?;
+    if !parent.is_displayed().await? {
+        div.click().await?;
+    }
+    let bmtbody = bmdiv.find(Locator::Css("tbody")).await?;
+    let bmtrs = bmtbody.find_all(Locator::Css("tr")).await?;
+    let odddiv = parent.find(Locator::Css(".odddiv")).await?;
+    let oddtbody = odddiv.find(Locator::Css("tbody")).await?;
+    let oddtrs = oddtbody.find_all(Locator::Css("tr")).await?;
+    let trs: Vec<_> = bmtrs.into_iter().zip(oddtrs.into_iter()).collect();
+    let r = join_all(trs.into_iter().map(|(bmtr, oddtr)| async move {
+        let bm = bmtr.find(Locator::Css("td span.hidden-480")).await?;
+        let bm = bm.text().await?;
+        let oddtds = oddtr.find_all(Locator::Css(".odd-v")).await?;
+        let odds = join_all(oddtds.into_iter().map(|td| async move {
+            let text = td.text().await.ok()?;
+            if text.is_empty() {
+                return None;
+            }
+            text.parse::<f32>().ok()
+        }));
+        let odds = odds.await.into_iter().flatten().collect();
+        Ok::<_, CmdError>((bm, odds))
+    }));
+    Ok(r.await.into_iter().flatten().collect())
 }

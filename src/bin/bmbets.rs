@@ -103,16 +103,25 @@ async fn get_match(client: &mut Client, prompt: &str) -> Option<Hit> {
     Some(hits[id].clone())
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 enum Error {
+    #[error("TabList")]
     TabList(CmdError),
+    #[error("TabTranslate")]
     TabTranslate,
+    #[error("TabFind")]
     TabFind,
+    #[error("TabClick")]
     TabClick(CmdError),
+    #[error("ToolbarList")]
     ToolbarList(CmdError),
+    #[error("ToolbarTranslate")]
     ToolbarTranslate,
+    #[error("ToolbarFind")]
     ToolbarFind,
+    #[error("ToolbarClick")]
     ToolbarClick(Toolbar, CmdError),
+    #[error("Divs")]
     Divs(CmdError),
 }
 
@@ -147,8 +156,18 @@ async fn goto_event(
         .click()
         .await
         .map_err(|x| ToolbarClick(toolbar.clone(), x))?;
-    let divs = menu::odds_divs(client).await.map_err(Divs)?;
+    let content = menu::odds_content(client).await.map_err(Divs)?;
+    let divs = menu::odds_divs(content).await.map_err(Divs)?;
     println!("{:?} {:?} {:?} {}", e, tab_name, toolbar_name, divs.len());
+    for (name, div) in divs {
+        println!("{}", name);
+        // div.click().await.map_err(Divs)?;
+        // sleep(Duration::from_millis(2000)).await;
+        let table = menu::odds_table(div).await.map_err(Divs)?;
+        for odds in table {
+            println!("{:?}", odds);
+        }
+    }
     Ok(())
 }
 
