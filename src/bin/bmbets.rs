@@ -15,7 +15,6 @@ use std::fs;
 use std::io;
 use std::io::Write;
 use std::time::Instant;
-use tokio::time::{sleep, Duration};
 
 fn get_id() -> usize {
     loop {
@@ -161,8 +160,6 @@ async fn goto_event(
     println!("{:?} {:?} {:?} {}", e, tab_name, toolbar_name, divs.len());
     for (name, div) in divs {
         println!("{}", name);
-        // div.click().await.map_err(Divs)?;
-        // sleep(Duration::from_millis(2000)).await;
         let table = menu::odds_table(div).await.map_err(Divs)?;
         for odds in table {
             println!("{:?}", odds);
