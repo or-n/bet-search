@@ -16,14 +16,12 @@ use std::io;
 use std::io::Write;
 use std::time::Instant;
 
-fn get_id() -> usize {
-    loop {
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
-        if let Ok(number) = input.trim().parse() {
-            return number;
-        }
-    }
+fn get_id() -> Option<usize> {
+    print!("choose: ");
+    io::stdout().flush().unwrap();
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+    input.trim().parse().ok()
 }
 
 fn fortuna_football(
@@ -96,9 +94,10 @@ async fn get_match(client: &mut Client, prompt: &str) -> Option<Hit> {
     for (id, hit) in hits.iter().enumerate() {
         println!("{id}: {} - {}", hit.players[0], hit.players[1]);
     }
-    print!("choose: ");
-    io::stdout().flush().unwrap();
-    let id = if hits.len() == 1 { 0 } else { get_id() };
+    let mut id = get_id()?;
+    while id >= hits.len() {
+        id = get_id()?;
+    }
     Some(hits[id].clone())
 }
 

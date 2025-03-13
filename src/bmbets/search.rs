@@ -14,7 +14,7 @@ pub async fn find_match(
     let search = client.find(Locator::Id("search")).await?;
     search.send_keys(match_name).await?;
     search.send_keys(browser::ENTER).await?;
-    sleep(Duration::from_secs(2)).await;
+    sleep(Duration::from_secs(4)).await;
     client.source().await
 }
 
