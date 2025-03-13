@@ -1,5 +1,8 @@
+use crate::bmbets::menu;
 use crate::shared::event;
 use eat::*;
+use event::Event;
+use fantoccini::{error::CmdError, Client};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Tab {
@@ -225,4 +228,70 @@ impl Eat<&str, (), bool> for Part {
             Err(())
         }
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("TabList")]
+    TabList(CmdError),
+    #[error("TabTranslate")]
+    TabTranslate,
+    #[error("TabFind")]
+    TabFind,
+    #[error("TabClick")]
+    TabClick(CmdError),
+    #[error("ToolbarList")]
+    ToolbarList(CmdError),
+    #[error("ToolbarTranslate")]
+    ToolbarTranslate,
+    #[error("ToolbarFind")]
+    ToolbarFind,
+    #[error("ToolbarClick")]
+    ToolbarClick(Toolbar, CmdError),
+    #[error("Divs")]
+    Divs(CmdError),
+}
+
+pub async fn goto(
+    client: &mut Client,
+    e: &Event<event::Football>,
+) -> Result<(), Error> {
+    use Error::*;
+    menu::dropdown(client).await.map_err(TabList)?;
+    let tab_element = menu::tab(client).await.map_err(TabList)?;
+    let tab_list = menu::links(tab_element).await.map_err(TabList)?;
+    let mut tab_list = tab_list.into_iter().filter_map(|(name, button)| {
+        let (_, x) = Tab::eat(name.as_str(), ()).ok()?;
+        Some((x, (name, button)))
+    });
+    let event_tab = tab(&e.id).ok_or(TabTranslate)?;
+    let event_toolbar = toolbar(&e.id).ok_or(ToolbarTranslate)?;
+    let (_tab, (tab_name, tab_button)) =
+        tab_list.find(|(x, _)| *x == event_tab).ok_or(TabFind)?;
+    tab_button.click().await.map_err(TabClick)?;
+    let toolbar = menu::toolbar(client).await.map_err(ToolbarList)?;
+    let toolbar_list = menu::links(toolbar).await.map_err(ToolbarList)?;
+    let mut toolbar_list =
+        toolbar_list.into_iter().filter_map(|(name, button)| {
+            let (_, x) = Toolbar::eat(name.as_str(), ()).ok()?;
+            Some((x, (name, button)))
+        });
+    let (toolbar, (toolbar_name, toolbar_button)) = toolbar_list
+        .find(|(x, _)| *x == event_toolbar)
+        .ok_or(ToolbarFind)?;
+    toolbar_button
+        .click()
+        .await
+        .map_err(|x| ToolbarClick(toolbar.clone(), x))?;
+    let content = menu::odds_content(client).await.map_err(Divs)?;
+    let divs = menu::odds_divs(content).await.map_err(Divs)?;
+    println!("{:?} {:?} {:?} {}", e, tab_name, toolbar_name, divs.len());
+    for (name, div) in divs {
+        println!("{}", name);
+        let table = menu::odds_table(div).await.map_err(Divs)?;
+        for odds in table {
+            println!("{:?}", odds);
+        }
+    }
+    Ok(())
 }
