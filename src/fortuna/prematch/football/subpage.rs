@@ -1,5 +1,8 @@
 use crate::fortuna::prematch::URL;
-use crate::shared::{book::Subpages, event::Event};
+use crate::shared::{
+    book::Subpages,
+    event::{Event, Match},
+};
 use crate::utils::{
     date,
     download::Download,
@@ -45,7 +48,7 @@ impl Tag<Page, Html> {
         split2(name, " - ")
     }
 
-    pub fn events(&self) -> Vec<Event<String>> {
+    pub fn events(&self) -> Vec<Event<String, String>> {
         let market = Selector::parse("div.market").unwrap();
         let name = Selector::parse("h3 > a").unwrap();
         let odds = Selector::parse("div.odds a").unwrap();
@@ -115,4 +118,22 @@ impl Url for Page {
     fn url(&self) -> String {
         format!("{}{}", URL, self.0)
     }
+}
+
+pub fn to_match(
+    url: String,
+    document: Tag<Page, Html>,
+) -> Option<Match<String, String>> {
+    let Some(players) = document.players() else {
+        return None;
+    };
+    let events = document.events();
+    if events.is_empty() {
+        return None;
+    }
+    Some(Match {
+        url,
+        players,
+        events,
+    })
 }

@@ -4,10 +4,10 @@ use event::{Event, Match};
 use std::fs;
 
 fn fortuna_football(
-    event: Event<String>,
+    event: Event<String, String>,
     players: [String; 2],
-) -> Option<Event<event::Football>> {
-    if let Ok(("", id)) = event::Football::eat(&event.id, players) {
+) -> Option<Event<event::Football, String>> {
+    if let Ok(("", id)) = event::Football::eat(event.id.as_str(), players) {
         return Some(Event {
             id,
             odds: event.odds,
@@ -16,7 +16,7 @@ fn fortuna_football(
     None
 }
 
-fn safe_event<T>(event: Event<T>) -> Option<Event<T>> {
+fn safe_event<T1, T2>(event: Event<T1, T2>) -> Option<Event<T1, T2>> {
     let odds: Vec<_> = event
         .odds
         .into_iter()
@@ -28,15 +28,15 @@ fn safe_event<T>(event: Event<T>) -> Option<Event<T>> {
     Some(event::Event { odds, ..event })
 }
 
-fn safe_match<T>(m: Match<T>) -> Option<Match<T>> {
+fn safe_match<T1, T2>(m: Match<T1, T2>) -> Option<Match<T1, T2>> {
     let events: Vec<_> = m.events.into_iter().filter_map(safe_event).collect();
     if events.is_empty() {
         return None;
     }
-    Some(event::Match { events, ..m })
+    Some(event::Match::<T1, T2> { events, ..m })
 }
 
-pub async fn get_safe_matches() -> Vec<Match<event::Football>> {
+pub async fn get_safe_matches() -> Vec<Match<event::Football, String>> {
     let entries = fs::read_dir("downloads").unwrap();
     let matches = entries.filter_map(|entry| {
         let entry = entry.unwrap();
@@ -54,7 +54,7 @@ pub async fn get_safe_matches() -> Vec<Match<event::Football>> {
         if events.is_empty() {
             return None;
         }
-        Some(event::Match {
+        Some(event::Match::<event::Football, String> {
             events,
             url: m.url,
             players: m.players,

@@ -3,6 +3,7 @@ use crate::shared::event;
 use eat::*;
 use event::Event;
 use fantoccini::{error::CmdError, Client};
+use futures::StreamExt;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Tab {
@@ -254,8 +255,8 @@ pub enum Error {
 
 pub async fn goto(
     client: &mut Client,
-    e: &Event<event::Football>,
-) -> Result<(), Error> {
+    e: &Event<event::Football, String>,
+) -> Result<Event<event::Football, String>, Error> {
     use Error::*;
     menu::dropdown(client).await.map_err(TabList)?;
     let tab_element = menu::tab(client).await.map_err(TabList)?;
@@ -286,12 +287,140 @@ pub async fn goto(
     let content = menu::odds_content(client).await.map_err(Divs)?;
     let divs = menu::odds_divs(content).await.map_err(Divs)?;
     println!("{:?} {:?} {:?} {}", e, tab_name, toolbar_name, divs.len());
-    for (name, div) in divs {
-        println!("{}", name);
-        let table = menu::odds_table(div).await.map_err(Divs)?;
-        for odds in table {
-            println!("{:?}", odds);
+    let new_odds =
+        futures::stream::iter(e.odds.iter()).filter_map(|(variant, odd)| {
+            let x = eat_variant(&e.id, &variant);
+            let divs = divs.clone();
+            async move {
+                if let Variant::Unknown(_) = x {
+                    return None;
+                }
+                let name = x.table_name();
+                println!("{:?} {} {}", x, name, odd);
+                if let Some((_, div)) = divs.iter().find(|(n, _)| *n == name) {
+                    let table = menu::odds_table(div.clone())
+                        .await
+                        .map_err(Divs)
+                        .ok()?;
+                    let mut sum = Vec::new();
+                    for (book, odds) in &table {
+                        if sum.is_empty() {
+                            sum = odds.clone();
+                        } else if sum.len() == odds.len() {
+                            sum.iter_mut()
+                                .zip(odds.iter())
+                                .for_each(|(sum, odd)| *sum += odd);
+                        } else {
+                            panic!()
+                        }
+                    }
+                    sum.iter_mut().for_each(|sum| *sum /= table.len() as f32);
+                    let mean = sum;
+                    let mean_odd = x.choose_odd(&mean);
+                    println!("{:?} {}", mean, mean_odd);
+                }
+                None::<(String, f32)>
+            }
+        });
+    let new_odds = new_odds.collect().await;
+    let new_e = Event {
+        id: e.id.clone(),
+        odds: new_odds,
+    };
+    Ok(new_e)
+}
+
+#[derive(Debug)]
+enum Variant {
+    Handicap(String, OverUnder),
+    Total(String, OverUnder),
+    Unknown(String),
+}
+
+#[derive(Debug)]
+enum OverUnder {
+    Over,
+    Under,
+}
+
+pub fn eat_variant(e: &event::Football, i: &str) -> Variant {
+    if let Ok(i) = "mniej ".drop(i) {
+        return under(e, i);
+    }
+    if let Ok(i) = "Mniej ".drop(i) {
+        return under(e, i);
+    }
+    if let Ok(i) = "wiecej ".drop(i) {
+        return over(e, i);
+    }
+    if let Ok(i) = "Wiecej ".drop(i) {
+        return over(e, i);
+    }
+    Variant::Unknown(i.to_string())
+}
+
+pub fn under(e: &event::Football, i: &str) -> Variant {
+    use event::Football::*;
+    use OverUnder::*;
+    let s = i.to_string();
+    match e {
+        Goals => Variant::Total(s, Under),
+        GoalsH1 => Variant::Total(s, Under),
+        GoalsH2 => Variant::Total(s, Under),
+        GoalsP1 => Variant::Handicap(s, Under),
+        GoalsP1H1 => Variant::Handicap(s, Under),
+        GoalsP1H2 => Variant::Handicap(s, Under),
+        GoalsP2 => Variant::Handicap(s, Under),
+        GoalsP2H1 => Variant::Handicap(s, Under),
+        GoalsP2H2 => Variant::Handicap(s, Under),
+        _ => todo!(),
+    }
+}
+
+pub fn over(e: &event::Football, i: &str) -> Variant {
+    use event::Football::*;
+    use OverUnder::*;
+    let s = i.to_string();
+    match e {
+        Goals => Variant::Total(s, Over),
+        GoalsH1 => Variant::Total(s, Over),
+        GoalsH2 => Variant::Total(s, Over),
+        GoalsP1 => Variant::Handicap(s, Over),
+        GoalsP1H1 => Variant::Handicap(s, Over),
+        GoalsP1H2 => Variant::Handicap(s, Over),
+        GoalsP2 => Variant::Handicap(s, Over),
+        GoalsP2H1 => Variant::Handicap(s, Over),
+        GoalsP2H2 => Variant::Handicap(s, Over),
+        _ => todo!(),
+    }
+}
+
+pub fn pos_line(x: &String) -> String {
+    if x.chars().next() == Some('-') {
+        x.clone()
+    } else {
+        format!("+{}", x)
+    }
+}
+
+impl Variant {
+    pub fn table_name(&self) -> String {
+        use OverUnder::*;
+        use Variant::*;
+        match self {
+            Total(x, _) => format!("Total {}", pos_line(x)),
+            Handicap(x, _) => format!("Handicap {}", pos_line(x)),
+            Unknown(_) => panic!(),
         }
     }
-    Ok(())
+
+    pub fn choose_odd(&self, odds: &Vec<f32>) -> f32 {
+        use OverUnder::*;
+        use Variant::*;
+        match self {
+            Total(_, Over) => odds[0],
+            Total(_, Under) => odds[1],
+            _ => panic!(),
+        }
+    }
 }

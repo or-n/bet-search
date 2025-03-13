@@ -8,36 +8,10 @@ use odds::utils::{
     page::{Name, Tag, Url},
     save::save,
 };
-use scraper::Html;
 use shared::book::Subpages;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex;
-
-fn contents(document: Tag<football::subpage::Page, Html>) -> Option<String> {
-    let Some(players) = document.players() else {
-        return None;
-    };
-    println!("{} - {}", players[0], players[1]);
-    let events = document.events().into_iter().filter_map(|event| {
-        let odds: Vec<_> = event
-            .odds
-            .into_iter()
-            .map(|pair| format!("{:?}", pair))
-            .collect();
-        Some(format!("{}\n{}", event.id, odds.join("\n")))
-    });
-    let events: Vec<_> = events.collect();
-    if events.is_empty() {
-        return None;
-    }
-    Some(format!(
-        "{}\n{}\n\n{}",
-        players[0],
-        players[1],
-        events.join("\n\n")
-    ))
-}
 
 #[tokio::main]
 async fn main() {
@@ -61,12 +35,17 @@ async fn main() {
         }
         let html = Tag::download(&mut client, subpage.clone()).await.unwrap();
         download_count += 1;
-        let Some(contents) = contents(html.document()) else {
+        let Some(m) =
+            football::subpage::to_match(subpage.url(), html.document())
+        else {
+            continue;
+        };
+        println!("{} - {}", m.players[0], m.players[1]);
+        let Some(contents) = shared::event::match_contents(&m) else {
             continue;
         };
         let file = format!("downloads/{}", subpage.name());
-        let f = format!("{}\n\n{}", subpage.url(), contents);
-        let _ = save(f.as_bytes(), file).await;
+        let _ = save(contents.as_bytes(), file).await;
         save_count += 1;
     }
     client.close().await.unwrap();

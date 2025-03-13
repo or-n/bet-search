@@ -1,4 +1,5 @@
 use fantoccini::{Client, ClientBuilder};
+use futures::stream::StreamExt;
 use odds::bmbets::{
     football::goto,
     search::{find_match, hits, Hit},
@@ -12,6 +13,8 @@ use serde_json::{json, Map};
 use std::io;
 use std::io::Write;
 use std::time::Instant;
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 
 fn get_id() -> Option<usize> {
     print!("choose: ");
@@ -79,16 +82,39 @@ async fn main() {
     println!("Elapsed time: {:.2?}", start.elapsed());
     let start = Instant::now();
     client.goto(&hit.relative_url).await.unwrap();
-    for e in &m.events {
-        if let event::Football::Unknown(_) = e.id {
-            continue;
+    let new_events = futures::stream::iter(m.events.iter()).filter_map(|e| {
+        let mut client = client.clone();
+        async move {
+            if let event::Football::Unknown(_) = e.id {
+                return None;
+            }
+            match goto(&mut client, e).await {
+                Ok(new_e) => {
+                    if new_e.odds.is_empty() {
+                        return None;
+                    }
+                    Some(new_e)
+                }
+                Err(error) => {
+                    println!("{:?}", e);
+                    println!("{:?}", error);
+                    None
+                }
+            }
         }
-        if let Err(error) = goto(&mut client, e).await {
-            println!("{:?}", e);
-            println!("{:?}", error);
-            return;
-        }
-    }
+    });
+    let new_events: Vec<_> = new_events.collect().await;
+    let new_m = event::Match {
+        url: m.url.clone(),
+        players: m.players.clone(),
+        events: new_events,
+    };
+    let Some(contents) = event::match_contents(&new_m) else {
+        return;
+    };
+    let path = format!("value/match");
+    let mut file = File::create(&path).await.unwrap();
+    file.write_all(contents.as_bytes()).await.unwrap();
     client.close().await.unwrap();
     println!("Elapsed time: {:.2?}", start.elapsed());
 }

@@ -1,7 +1,8 @@
 use crate::utils::scrape::split2;
 use eat::*;
+use std::fmt::Debug;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Football {
     Goals,
     GoalsH1,
@@ -51,19 +52,19 @@ fn eat_pair(i: &str) -> Result<(&str, (String, String)), ()> {
 }
 
 #[derive(Debug)]
-pub struct Event<T> {
-    pub id: T,
-    pub odds: Vec<(String, f32)>,
+pub struct Event<T1, T2> {
+    pub id: T1,
+    pub odds: Vec<(T2, f32)>,
 }
 
 #[derive(Debug)]
-pub struct Match<EventId> {
+pub struct Match<T1, T2> {
     pub url: String,
     pub players: [String; 2],
-    pub events: Vec<Event<EventId>>,
+    pub events: Vec<Event<T1, T2>>,
 }
 
-pub fn eat_match(i: &str) -> Result<Match<String>, ()> {
+pub fn eat_match(i: &str) -> Result<Match<String, String>, ()> {
     let parts: Vec<_> = i.split("\n\n").collect();
     let url = parts[0].to_string();
     let players = split2(parts[1].to_string(), "\n").ok_or(())?;
@@ -85,4 +86,36 @@ pub fn eat_match(i: &str) -> Result<Match<String>, ()> {
         players,
         events: events.collect(),
     })
+}
+
+pub fn event_contents<T1, T2>(event: &Event<T1, T2>) -> String
+where
+    T1: Debug,
+    T2: Debug,
+{
+    let odds: Vec<_> = event
+        .odds
+        .iter()
+        .map(|pair| format!("{:?}", pair))
+        .collect();
+    format!("{:?}\n{}", event.id, odds.join("\n"))
+}
+
+pub fn match_contents<T1, T2>(m: &Match<T1, T2>) -> Option<String>
+where
+    T1: Debug,
+    T2: Debug,
+{
+    let events = m.events.iter().map(event_contents);
+    let events: Vec<_> = events.collect();
+    if events.is_empty() {
+        return None;
+    }
+    Some(format!(
+        "{}\n\n{}\n{}\n\n{}",
+        m.url,
+        m.players[0],
+        m.players[1],
+        events.join("\n\n")
+    ))
 }
