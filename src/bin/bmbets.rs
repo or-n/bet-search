@@ -168,6 +168,20 @@ async fn goto_event(
     Ok(())
 }
 
+async fn get_hit(client: &mut Client) -> Hit {
+    loop {
+        print!("search: ");
+        io::stdout().flush().unwrap();
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let Some(hit) = get_match(client, &input).await else {
+            println!("no hits");
+            continue;
+        };
+        return hit;
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let matches = get_safe_matches().await;
@@ -189,11 +203,7 @@ async fn main() {
         .connect(&browser::localhost(4444))
         .await
         .unwrap();
-    println!("search: {}", m.players[0]);
-    let Some(hit) = get_match(&mut client, &m.players[0]).await else {
-        println!("no hits");
-        return;
-    };
+    let hit = get_hit(&mut client).await;
     println!("{} - {}", hit.players[0], hit.players[1]);
     println!("{}{}", URL, hit.relative_url);
     println!("Elapsed time: {:.2?}", start.elapsed());
