@@ -1,4 +1,4 @@
-use crate::utils::scrape::split2;
+use crate::utils::{date, scrape::split2};
 use eat::*;
 use std::fmt::Debug;
 
@@ -60,6 +60,7 @@ pub struct Event<T1, T2> {
 #[derive(Debug)]
 pub struct Match<T1, T2> {
     pub url: String,
+    pub date: chrono::NaiveDateTime,
     pub players: [String; 2],
     pub events: Vec<Event<T1, T2>>,
 }
@@ -67,8 +68,9 @@ pub struct Match<T1, T2> {
 pub fn eat_match(i: &str) -> Result<Match<String, String>, ()> {
     let parts: Vec<_> = i.split("\n\n").collect();
     let url = parts[0].to_string();
-    let players = split2(parts[1].to_string(), "\n").ok_or(())?;
-    let events = parts[2..].into_iter().filter_map(|part| {
+    let date = date::eat2(parts[1]).ok_or(())?;
+    let players = split2(parts[2].to_string(), "\n").ok_or(())?;
+    let events = parts[3..].into_iter().filter_map(|part| {
         let lines: Vec<_> = part.split('\n').collect();
         let odds: Vec<_> = lines[1..]
             .into_iter()
@@ -83,6 +85,7 @@ pub fn eat_match(i: &str) -> Result<Match<String, String>, ()> {
     });
     Ok(Match {
         url,
+        date,
         players,
         events: events.collect(),
     })
@@ -112,8 +115,9 @@ where
         return None;
     }
     Some(format!(
-        "{}\n\n{}\n{}\n\n{}",
+        "{}\n\n{}\n\n{}\n{}\n\n{}",
         m.url,
+        m.date,
         m.players[0],
         m.players[1],
         events.join("\n\n")

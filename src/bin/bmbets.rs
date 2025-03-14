@@ -1,3 +1,4 @@
+use eat::*;
 use fantoccini::{Client, ClientBuilder};
 use futures::stream::StreamExt;
 use odds::bmbets::{
@@ -5,9 +6,9 @@ use odds::bmbets::{
     search::{find_match, hits, Hit},
     URL,
 };
-use odds::fortuna::safe;
+use odds::fortuna;
 use odds::shared::event;
-use odds::utils::browser;
+use odds::utils::{browser, page::Name};
 use scraper::Html;
 use serde_json::{json, Map};
 use std::io;
@@ -55,28 +56,13 @@ async fn get_match(client: &mut Client, prompt: &str) -> Option<Hit> {
     Some(hits[id].clone())
 }
 
-#[tokio::main]
-async fn main() {
-    let matches = safe::get_safe_matches().await;
-    if matches.is_empty() {
-        println!("no matches");
-        return;
-    }
-    let match_id = 0;
-    let m = &matches[match_id];
-    println!("{} - {}", m.players[0], m.players[1]);
+async fn process_match(
+    m: &event::Match<event::Football, String>,
+    client: &mut Client,
+) {
     let start = Instant::now();
-    let caps = json!({
-        "moz:firefoxOptions": {},
-        "pageLoadStrategy": "eager"
-    });
-    let caps: Map<_, _> = caps.as_object().unwrap().clone();
-    let mut client = ClientBuilder::native()
-        .capabilities(caps)
-        .connect(&browser::localhost(4444))
-        .await
-        .unwrap();
-    let hit = get_hit(&mut client).await;
+    println!("{} - {}", m.players[0], m.players[1]);
+    let hit = get_hit(client).await;
     println!("{} - {}", hit.players[0], hit.players[1]);
     println!("{}{}", URL, hit.relative_url);
     println!("Elapsed time: {:.2?}", start.elapsed());
@@ -106,15 +92,40 @@ async fn main() {
     let new_events: Vec<_> = new_events.collect().await;
     let new_m = event::Match {
         url: m.url.clone(),
+        date: m.date.clone(),
         players: m.players.clone(),
         events: new_events,
     };
     let Some(contents) = event::match_contents(&new_m) else {
         return;
     };
-    let path = format!("value/match");
+    let r = fortuna::Url::eat(new_m.url.as_str(), ());
+    let (_i, url) = r.unwrap();
+    let path = format!("safe/{}", url.name());
     let mut file = File::create(&path).await.unwrap();
     file.write_all(contents.as_bytes()).await.unwrap();
-    client.close().await.unwrap();
     println!("Elapsed time: {:.2?}", start.elapsed());
+}
+
+#[tokio::main]
+async fn main() {
+    let matches = fortuna::safe::get_safe_matches().await;
+    if matches.is_empty() {
+        println!("no matches");
+        return;
+    }
+    let caps = json!({
+        "moz:firefoxOptions": {},
+        "pageLoadStrategy": "eager"
+    });
+    let caps: Map<_, _> = caps.as_object().unwrap().clone();
+    let mut client = ClientBuilder::native()
+        .capabilities(caps)
+        .connect(&browser::localhost(4444))
+        .await
+        .unwrap();
+    for m in matches {
+        process_match(&m, &mut client).await;
+    }
+    client.close().await.unwrap();
 }

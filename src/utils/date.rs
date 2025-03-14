@@ -14,6 +14,11 @@ pub fn eat(i: &str) -> Option<NaiveDateTime> {
     Some(date2)
 }
 
+pub fn eat2(i: &str) -> Option<NaiveDateTime> {
+    let format = "%Y-%m-%d %H:%M:%S";
+    NaiveDateTime::parse_from_str(i, format).ok()
+}
+
 pub fn in_hours(date: NaiveDateTime, n: i64) -> bool {
     let now = Local::now().naive_local();
     date <= now + Duration::hours(n)

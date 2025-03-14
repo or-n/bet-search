@@ -55,9 +55,10 @@ pub async fn get_safe_matches() -> Vec<Match<event::Football, String>> {
             return None;
         }
         Some(event::Match::<event::Football, String> {
-            events,
             url: m.url,
+            date: m.date,
             players: m.players,
+            events,
         })
     });
     matches.collect()

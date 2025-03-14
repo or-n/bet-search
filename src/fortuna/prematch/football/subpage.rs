@@ -93,7 +93,7 @@ impl Tag<Page, Html> {
             .collect()
     }
 
-    pub fn _date(&self) -> String {
+    pub fn date(&self) -> String {
         let date = Selector::parse("span.event-datetime").unwrap();
         self.inner()
             .select(&date)
@@ -120,7 +120,7 @@ impl Download<fantoccini::Client, Page> for Tag<Page, String> {
 
 impl Name for Page {
     fn name(&self) -> String {
-        format!("{}", self.0.replace("/", "."))
+        self.0.replace("/", ".")
     }
 }
 
@@ -141,8 +141,10 @@ pub fn to_match(
     if events.is_empty() {
         return None;
     }
+    let date = date::eat(document.date().as_str())?;
     Some(Match {
         url,
+        date,
         players,
         events,
     })
