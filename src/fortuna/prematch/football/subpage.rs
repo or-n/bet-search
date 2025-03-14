@@ -10,7 +10,17 @@ use crate::utils::{
     scrape::{clean_text, main_text, split2},
 };
 use chrono::NaiveDateTime;
+use eat::*;
 use scraper::{Html, Selector};
+
+impl Eat<&str, (), ()> for Page {
+    fn eat(i: &str, _data: ()) -> Result<(&str, Self), ()> {
+        if i.is_empty() {
+            return Err(());
+        }
+        Ok(("", Page(i.to_string())))
+    }
+}
 
 impl Subpages<(Page, NaiveDateTime)> for Tag<super::Page, Html> {
     fn subpages(&self) -> Vec<(Page, NaiveDateTime)> {
@@ -110,7 +120,7 @@ impl Download<fantoccini::Client, Page> for Tag<Page, String> {
 
 impl Name for Page {
     fn name(&self) -> String {
-        format!("fortuna{}", self.0.replace("/", "."))
+        format!("{}", self.0.replace("/", "."))
     }
 }
 

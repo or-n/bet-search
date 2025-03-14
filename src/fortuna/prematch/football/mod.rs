@@ -6,12 +6,38 @@ use crate::utils::{
     download::Download,
     page::{Name, Tag},
 };
+use eat::*;
 use fantoccini::{error::CmdError, Client, Locator};
 use tokio::time::{sleep, Duration};
 
 const URL: &str = "/zaklady-bukmacherskie/pilka-nozna";
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone)]
+pub enum Url {
+    Root(Page),
+    Subpage(subpage::Page),
+}
+
+impl Eat<&str, (), ()> for Url {
+    fn eat(i: &str, _data: ()) -> Result<(&str, Self), ()> {
+        let i = URL.drop(i)?;
+        if let Ok((i, subpage)) = subpage::Page::eat(i, ()) {
+            return Ok((i, Url::Subpage(subpage)));
+        }
+        Ok((i, Url::Root(Page)))
+    }
+}
+
+impl Name for Url {
+    fn name(&self) -> String {
+        match self {
+            Url::Root(_) => "".to_string(),
+            Url::Subpage(subpage) => subpage.name(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct Page;
 
 impl Download<Client, Page> for Tag<Page, String> {

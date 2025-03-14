@@ -1,3 +1,4 @@
+use eat::*;
 use fantoccini::ClientBuilder;
 use fortuna::prematch::football;
 use odds::fortuna;
@@ -40,11 +41,16 @@ async fn main() {
         else {
             continue;
         };
+        let r = fortuna::Url::eat(m.url.as_str(), ());
+        let Ok((_i, url)) = r else {
+            println!("{:?}", r);
+            continue;
+        };
         println!("{} - {}", m.players[0], m.players[1]);
         let Some(contents) = shared::event::match_contents(&m) else {
             continue;
         };
-        let file = format!("downloads/{}", subpage.name());
+        let file = format!("downloads/{}", url.name());
         let _ = save(contents.as_bytes(), file).await;
         save_count += 1;
     }
