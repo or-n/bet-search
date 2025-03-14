@@ -344,53 +344,36 @@ enum OverUnder {
 }
 
 pub fn eat_variant(e: &event::Football, i: &str) -> Variant {
+    use OverUnder::*;
     if let Ok(i) = "mniej ".drop(i) {
-        return under(e, i);
+        return overunder(e, i, Under);
     }
     if let Ok(i) = "Mniej ".drop(i) {
-        return under(e, i);
+        return overunder(e, i, Under);
     }
     if let Ok(i) = "wiecej ".drop(i) {
-        return over(e, i);
+        return overunder(e, i, Over);
     }
     if let Ok(i) = "Wiecej ".drop(i) {
-        return over(e, i);
+        return overunder(e, i, Over);
     }
     Variant::Unknown(i.to_string())
 }
 
-pub fn under(e: &event::Football, i: &str) -> Variant {
+pub fn overunder(e: &event::Football, i: &str, x: OverUnder) -> Variant {
     use event::Football::*;
     use OverUnder::*;
     let s = i.to_string();
     match e {
-        Goals => Variant::Total(s, Under),
-        GoalsH1 => Variant::Total(s, Under),
-        GoalsH2 => Variant::Total(s, Under),
-        GoalsP1 => Variant::Handicap(s, Under),
-        GoalsP1H1 => Variant::Handicap(s, Under),
-        GoalsP1H2 => Variant::Handicap(s, Under),
-        GoalsP2 => Variant::Handicap(s, Under),
-        GoalsP2H1 => Variant::Handicap(s, Under),
-        GoalsP2H2 => Variant::Handicap(s, Under),
-        _ => todo!(),
-    }
-}
-
-pub fn over(e: &event::Football, i: &str) -> Variant {
-    use event::Football::*;
-    use OverUnder::*;
-    let s = i.to_string();
-    match e {
-        Goals => Variant::Total(s, Over),
-        GoalsH1 => Variant::Total(s, Over),
-        GoalsH2 => Variant::Total(s, Over),
-        GoalsP1 => Variant::Handicap(s, Over),
-        GoalsP1H1 => Variant::Handicap(s, Over),
-        GoalsP1H2 => Variant::Handicap(s, Over),
-        GoalsP2 => Variant::Handicap(s, Over),
-        GoalsP2H1 => Variant::Handicap(s, Over),
-        GoalsP2H2 => Variant::Handicap(s, Over),
+        Goals => Variant::Total(s, x),
+        GoalsH1 => Variant::Total(s, x),
+        GoalsH2 => Variant::Total(s, x),
+        GoalsP1 => Variant::Handicap(s, x),
+        GoalsP1H1 => Variant::Handicap(s, x),
+        GoalsP1H2 => Variant::Handicap(s, x),
+        GoalsP2 => Variant::Handicap(s, x),
+        GoalsP2H1 => Variant::Handicap(s, x),
+        GoalsP2H2 => Variant::Handicap(s, x),
         _ => todo!(),
     }
 }

@@ -8,6 +8,10 @@ fn fortuna_football(
     players: [String; 2],
 ) -> Option<Event<event::Football, String>> {
     if let Ok(("", id)) = event::Football::eat(event.id.as_str(), players) {
+        if let event::Football::Unknown(_) = id {
+            println!("{:?}", id);
+            return None;
+        }
         return Some(Event {
             id,
             odds: event.odds,

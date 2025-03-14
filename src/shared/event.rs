@@ -1,6 +1,6 @@
 use crate::utils::{date, scrape::split2};
 use eat::*;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 #[derive(Debug, Clone)]
 pub enum Football {
@@ -34,6 +34,12 @@ pub enum Football {
     CornersP2H1,
     CornersP2H2,
     Unknown(String),
+}
+
+impl Display for Football {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 fn eat_pair(i: &str) -> Result<(&str, (String, String)), ()> {
@@ -93,7 +99,7 @@ pub fn eat_match(i: &str) -> Result<Match<String, String>, ()> {
 
 pub fn event_contents<T1, T2>(event: &Event<T1, T2>) -> String
 where
-    T1: Debug,
+    T1: Display,
     T2: Debug,
 {
     let odds: Vec<_> = event
@@ -101,12 +107,12 @@ where
         .iter()
         .map(|pair| format!("{:?}", pair))
         .collect();
-    format!("{:?}\n{}", event.id, odds.join("\n"))
+    format!("{}\n{}", event.id, odds.join("\n"))
 }
 
 pub fn match_contents<T1, T2>(m: &Match<T1, T2>) -> Option<String>
 where
-    T1: Debug,
+    T1: Display,
     T2: Debug,
 {
     let events = m.events.iter().map(event_contents);
@@ -117,7 +123,7 @@ where
     Some(format!(
         "{}\n\n{}\n\n{}\n{}\n\n{}",
         m.url,
-        m.date,
+        m.date.format("%Y-%m-%d %H:%M").to_string(),
         m.players[0],
         m.players[1],
         events.join("\n\n")

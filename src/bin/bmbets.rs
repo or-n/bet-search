@@ -47,7 +47,12 @@ async fn get_match(client: &mut Client, prompt: &str) -> Option<Hit> {
         return None;
     }
     for (id, hit) in hits.iter().enumerate() {
-        println!("{id}: {} - {}", hit.players[0], hit.players[1]);
+        println!(
+            "{id}: {} | {} - {}",
+            hit.date.format("%Y-%m-%d %H:%M"),
+            hit.players[0],
+            hit.players[1]
+        );
     }
     let mut id = get_id()?;
     while id >= hits.len() {
@@ -61,6 +66,7 @@ async fn process_match(
     client: &mut Client,
 ) {
     let start = Instant::now();
+    println!("{}", m.date.format("%Y-%m-%d %H:%M"));
     println!("{} - {}", m.players[0], m.players[1]);
     let hit = get_hit(client).await;
     println!("{} - {}", hit.players[0], hit.players[1]);

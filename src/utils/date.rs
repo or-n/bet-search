@@ -15,7 +15,7 @@ pub fn eat(i: &str) -> Option<NaiveDateTime> {
 }
 
 pub fn eat2(i: &str) -> Option<NaiveDateTime> {
-    let format = "%Y-%m-%d %H:%M:%S";
+    let format = "%Y-%m-%d %H:%M";
     NaiveDateTime::parse_from_str(i, format).ok()
 }
 
