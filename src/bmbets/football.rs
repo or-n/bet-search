@@ -30,7 +30,7 @@ pub fn tab(event: &event::Football) -> Option<Tab> {
     use Tab::*;
     match event {
         Goals | GoalsH1 | GoalsH2 => Some(TotalsGoals),
-        GoalsP1 | GoalsP1H1 | GoalsP1H2 | GoalsP2 | GoalsP2H1 | GoalsP2H2 => {
+        GoalsPlayer(_) | GoalsPlayerH1(_) | GoalsPlayerH2(_) => {
             Some(IndividualTotalGoals)
         }
         ExactGoals | ExactGoalsH1 | ExactGoalsH2 => Some(ExactGoalsNumber),
@@ -38,25 +38,27 @@ pub fn tab(event: &event::Football) -> Option<Tab> {
         Handicap | HandicapH1 | HandicapH2 => Some(AsianHandicap),
         H1 | H2 => Some(Winner),
         event::Football::Corners | CornersH1 | CornersH2 => Some(Tab::Corners),
-        CornersP1 | CornersP1H1 | CornersP1H2 | CornersP2 | CornersP2H1
-        | CornersP2H2 => Some(IndividualCorners),
-        Unknown(_) => None,
+        CornersPlayer(_) | CornersPlayerH1(_) | CornersPlayerH2(_) => {
+            Some(IndividualCorners)
+        }
+        _ => None,
     }
 }
 
 pub fn toolbar(event: &event::Football) -> Option<Toolbar> {
     use event::Football::*;
+    use event::Player::*;
     use Toolbar::*;
     match event {
         Goals => Some(Toolbar::FullTime),
         GoalsH1 => Some(Toolbar::FirstHalf),
         GoalsH2 => Some(Toolbar::SecondHalf),
-        GoalsP1 => Some(Home(Part::FullTime)),
-        GoalsP1H1 => Some(Home(Part::FirstHalf)),
-        GoalsP1H2 => Some(Home(Part::SecondHalf)),
-        GoalsP2 => Some(Away(Part::FullTime)),
-        GoalsP2H1 => Some(Away(Part::FirstHalf)),
-        GoalsP2H2 => Some(Away(Part::SecondHalf)),
+        GoalsPlayer(P1) => Some(Home(Part::FullTime)),
+        GoalsPlayerH1(P1) => Some(Home(Part::FirstHalf)),
+        GoalsPlayerH2(P1) => Some(Home(Part::SecondHalf)),
+        GoalsPlayer(P2) => Some(Away(Part::FullTime)),
+        GoalsPlayerH1(P2) => Some(Away(Part::FirstHalf)),
+        GoalsPlayerH2(P2) => Some(Away(Part::SecondHalf)),
         ExactGoals => Some(Toolbar::FullTime),
         ExactGoalsH1 => Some(Toolbar::FirstHalf),
         ExactGoalsH2 => Some(Toolbar::SecondHalf),
@@ -71,13 +73,13 @@ pub fn toolbar(event: &event::Football) -> Option<Toolbar> {
         Corners => Some(Total(Part::FullTime)),
         CornersH1 => Some(Total(Part::FirstHalf)),
         CornersH2 => Some(Total(Part::SecondHalf)),
-        CornersP1 => Some(HomeTotal(Part::FullTime)),
-        CornersP1H1 => Some(HomeTotal(Part::FirstHalf)),
-        CornersP1H2 => Some(HomeTotal(Part::SecondHalf)),
-        CornersP2 => Some(AwayTotal(Part::FullTime)),
-        CornersP2H1 => Some(AwayTotal(Part::FirstHalf)),
-        CornersP2H2 => Some(AwayTotal(Part::SecondHalf)),
-        Unknown(_) => None,
+        CornersPlayer(P1) => Some(HomeTotal(Part::FullTime)),
+        CornersPlayerH1(P1) => Some(HomeTotal(Part::FirstHalf)),
+        CornersPlayerH2(P1) => Some(HomeTotal(Part::SecondHalf)),
+        CornersPlayer(P2) => Some(AwayTotal(Part::FullTime)),
+        CornersPlayerH1(P2) => Some(AwayTotal(Part::FirstHalf)),
+        CornersPlayerH2(P2) => Some(AwayTotal(Part::SecondHalf)),
+        _ => None,
     }
 }
 
@@ -368,12 +370,9 @@ pub fn overunder(e: &event::Football, i: &str, x: OverUnder) -> Variant {
         Goals => Variant::Total(s, x),
         GoalsH1 => Variant::Total(s, x),
         GoalsH2 => Variant::Total(s, x),
-        GoalsP1 => Variant::Handicap(s, x),
-        GoalsP1H1 => Variant::Handicap(s, x),
-        GoalsP1H2 => Variant::Handicap(s, x),
-        GoalsP2 => Variant::Handicap(s, x),
-        GoalsP2H1 => Variant::Handicap(s, x),
-        GoalsP2H2 => Variant::Handicap(s, x),
+        GoalsPlayer(_) => Variant::Handicap(s, x),
+        GoalsPlayerH1(_) => Variant::Handicap(s, x),
+        GoalsPlayerH2(_) => Variant::Handicap(s, x),
         _ => todo!(),
     }
 }
