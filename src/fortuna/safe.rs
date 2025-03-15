@@ -7,17 +7,24 @@ fn fortuna_football(
     event: Event<String, String>,
     players: [String; 2],
 ) -> Option<Event<event::Football, String>> {
-    if let Ok(("", id)) = event::Football::eat(event.id.as_str(), players) {
-        if let event::Football::Unknown(_) = id {
-            println!("{:?}", id);
-            return None;
-        }
-        return Some(Event {
-            id,
-            odds: event.odds,
-        });
+    let i = event.id.as_str();
+    let r = event::Football::eat(i, players);
+    if let Err(error) = r {
+        println!("{} {:?}", i, error);
+        println!("");
+        return None;
     }
-    None
+    let (rest, id) = r.ok()?;
+    if !rest.is_empty() {
+        println!("{} {:?}", id, rest);
+        println!("{}", i);
+        println!("");
+        return None;
+    }
+    Some(Event {
+        id,
+        odds: event.odds,
+    })
 }
 
 fn safe_event<T1, T2>(event: Event<T1, T2>) -> Option<Event<T1, T2>> {

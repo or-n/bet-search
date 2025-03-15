@@ -77,9 +77,6 @@ async fn process_match(
     let new_events = futures::stream::iter(m.events.iter()).filter_map(|e| {
         let mut client = client.clone();
         async move {
-            if let event::Football::Unknown(_) = e.id {
-                return None;
-            }
             match goto(&mut client, e).await {
                 Ok(new_e) => {
                     if new_e.odds.is_empty() {

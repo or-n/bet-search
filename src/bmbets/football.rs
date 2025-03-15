@@ -2,6 +2,7 @@ use crate::bmbets::menu;
 use crate::shared::event;
 use eat::*;
 use event::Event;
+use event::Part;
 use fantoccini::{error::CmdError, Client};
 use futures::StreamExt;
 
@@ -29,53 +30,37 @@ pub fn tab(event: &event::Football) -> Option<Tab> {
     use event::Football::*;
     use Tab::*;
     match event {
-        Goals | GoalsHalf(_) => Some(TotalsGoals),
-        GoalsPlayer(_) | GoalsPlayerHalf(_, _) => Some(IndividualTotalGoals),
-        ExactGoals | ExactGoalsHalf(_) => Some(ExactGoalsNumber),
-        BothToScore | BothToScoreHalf(_) => Some(BothTeamsToScore),
-        Handicap | HandicapHalf(_) => Some(AsianHandicap),
-        Half(_) => Some(Winner),
-        event::Football::Corners | CornersHalf(_) => Some(Tab::Corners),
-        CornersPlayer(_) | CornersPlayerHalf(_, _) => Some(IndividualCorners),
+        event::Football::Winner(_) => Some(Tab::Winner),
+        Goals(_) => Some(TotalsGoals),
+        GoalsPlayer(_, _) => Some(IndividualTotalGoals),
+        ExactGoals(_) => Some(ExactGoalsNumber),
+        BothToScore(_) => Some(BothTeamsToScore),
+        Handicap(_) => Some(AsianHandicap),
+        event::Football::Corners(_) => Some(Tab::Corners),
+        CornersPlayer(_, _) => Some(IndividualCorners),
         _ => None,
     }
 }
 
 pub fn toolbar(event: &event::Football) -> Option<Toolbar> {
     use event::Football::*;
-    use event::Half;
     use event::Player::*;
     use Toolbar::*;
     match event {
-        Goals => Some(Toolbar::FullTime),
-        GoalsH1 => Some(Toolbar::FirstHalf),
-        GoalsH2 => Some(Toolbar::SecondHalf),
-        GoalsPlayer(P1) => Some(Home(Part::FullTime)),
-        GoalsPlayer(P2) => Some(Away(Part::FullTime)),
-        GoalsPlayerHalf(P1, Half::H1) => Some(Home(Part::FirstHalf)),
-        GoalsPlayerHalf(P1, Half::H2) => Some(Home(Part::SecondHalf)),
-        GoalsPlayerHalf(P2, Half::H1) => Some(Away(Part::FirstHalf)),
-        GoalsPlayerHalf(P2, Half::H2) => Some(Away(Part::SecondHalf)),
-        ExactGoals => Some(Toolbar::FullTime),
-        ExactGoalsH1 => Some(Toolbar::FirstHalf),
-        ExactGoalsH2 => Some(Toolbar::SecondHalf),
-        BothToScore => Some(Toolbar::FullTime),
-        BothToScoreH1 => Some(Toolbar::FirstHalf),
-        BothToScoreH2 => Some(Toolbar::SecondHalf),
-        Handicap => Some(Toolbar::FullTime),
-        HandicapH1 => Some(Toolbar::FirstHalf),
-        HandicapH2 => Some(Toolbar::SecondHalf),
-        H1 => Some(Toolbar::FirstHalf),
-        H2 => Some(Toolbar::SecondHalf),
-        Corners => Some(Total(Part::FullTime)),
-        CornersH1 => Some(Total(Part::FirstHalf)),
-        CornersH2 => Some(Total(Part::SecondHalf)),
-        CornersPlayer(P1) => Some(HomeTotal(Part::FullTime)),
-        CornersPlayerHalf(P1, Half::H1) => Some(HomeTotal(Part::FirstHalf)),
-        CornersPlayerHalf(P1, Half::H2) => Some(HomeTotal(Part::SecondHalf)),
-        CornersPlayer(P2) => Some(AwayTotal(Part::FullTime)),
-        CornersPlayerHalf(P2, Half::H1) => Some(AwayTotal(Part::FirstHalf)),
-        CornersPlayerHalf(P2, Half::H2) => Some(AwayTotal(Part::SecondHalf)),
+        event::Football::Winner(part) => Some(Toolbar::Part_(*part)),
+        Goals(part) => Some(Toolbar::Part_(*part)),
+        GoalsPlayer(P1, part) => Some(Home(*part)),
+        GoalsPlayer(P2, part) => Some(Away(*part)),
+        ExactGoals(part) => Some(Toolbar::Part_(*part)),
+        // BothToScore => Some(Toolbar::FullTime),
+        // BothToScoreH1 => Some(Toolbar::FirstHalf),
+        // BothToScoreH2 => Some(Toolbar::SecondHalf),
+        // Handicap => Some(Toolbar::FullTime),
+        // HandicapH1 => Some(Toolbar::FirstHalf),
+        // HandicapH2 => Some(Toolbar::SecondHalf),
+        Corners(part) => Some(Total(*part)),
+        CornersPlayer(P1, part) => Some(HomeTotal(*part)),
+        CornersPlayer(P2, part) => Some(AwayTotal(*part)),
         _ => None,
     }
 }
@@ -137,9 +122,7 @@ impl Eat<&str, (), ()> for Tab {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Toolbar {
-    FullTime,
-    FirstHalf,
-    SecondHalf,
+    Part_(Part),
     Winner(Part),
     AsianHandicap(Part),
     Total(Part),
@@ -150,24 +133,17 @@ pub enum Toolbar {
     Away(Part),
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Part {
-    FullTime,
-    FirstHalf,
-    SecondHalf,
-}
-
 impl Eat<&str, (), ()> for Toolbar {
     fn eat(i: &str, _data: ()) -> Result<(&str, Self), ()> {
         use Toolbar::*;
         if let Ok(i) = "Full Time".drop(i) {
-            return Ok((i, FullTime));
+            return Ok((i, Part_(Part::FullTime)));
         }
         if let Ok(i) = "1st Half".drop(i) {
-            return Ok((i, FirstHalf));
+            return Ok((i, Part_(Part::FirstHalf)));
         }
         if let Ok(i) = "2nd Half".drop(i) {
-            return Ok((i, SecondHalf));
+            return Ok((i, Part_(Part::SecondHalf)));
         }
         if let Ok(i) = "1x2".drop(i) {
             let (i, part) = Part::eat(i, true)?;
@@ -302,7 +278,7 @@ pub async fn goto(
                         .map_err(Divs)
                         .ok()?;
                     let mut sum = Vec::new();
-                    for (book, odds) in &table {
+                    for (_book, odds) in &table {
                         if sum.is_empty() {
                             sum = odds.clone();
                         } else if sum.len() == odds.len() {
@@ -329,6 +305,7 @@ pub async fn goto(
     Ok(new_e)
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 enum Variant {
     Handicap(String, OverUnder),
@@ -342,7 +319,7 @@ enum OverUnder {
     Under,
 }
 
-pub fn eat_variant(e: &event::Football, i: &str) -> Variant {
+fn eat_variant(e: &event::Football, i: &str) -> Variant {
     use OverUnder::*;
     if let Ok(i) = "mniej ".drop(i) {
         return overunder(e, i, Under);
@@ -359,16 +336,12 @@ pub fn eat_variant(e: &event::Football, i: &str) -> Variant {
     Variant::Unknown(i.to_string())
 }
 
-pub fn overunder(e: &event::Football, i: &str, x: OverUnder) -> Variant {
+fn overunder(e: &event::Football, i: &str, x: OverUnder) -> Variant {
     use event::Football::*;
-    use OverUnder::*;
     let s = i.to_string();
     match e {
-        Goals => Variant::Total(s, x),
-        GoalsH1 => Variant::Total(s, x),
-        GoalsH2 => Variant::Total(s, x),
-        GoalsPlayer(_) => Variant::Handicap(s, x),
-        GoalsPlayerHalf(_, _) => Variant::Handicap(s, x),
+        Goals(_) => Variant::Total(s, x),
+        GoalsPlayer(_, _) => Variant::Handicap(s, x),
         _ => todo!(),
     }
 }
@@ -383,7 +356,6 @@ pub fn pos_line(x: &String) -> String {
 
 impl Variant {
     pub fn table_name(&self) -> String {
-        use OverUnder::*;
         use Variant::*;
         match self {
             Total(x, _) => format!("Total {}", pos_line(x)),
