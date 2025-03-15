@@ -214,23 +214,28 @@ fn eat_player(
     [p1, p2]: [String; 2],
 ) -> Result<(&str, event::Player), ()> {
     use event::Player::*;
-    if let Ok(i) = "1.druzyna".drop(i) {
-        return Ok((i, P1));
-    }
-    if let Ok(i) = "1.drużyna".drop(i) {
-        return Ok((i, P1));
-    }
     if let Ok(i) = p1.as_str().drop(i) {
         return Ok((i, P1));
     }
-    if let Ok(i) = "2.druzyna".drop(i) {
-        return Ok((i, P2));
-    }
-    if let Ok(i) = "2.drużyna".drop(i) {
-        return Ok((i, P2));
-    }
     if let Ok(i) = p2.as_str().drop(i) {
         return Ok((i, P2));
+    }
+    let player = |i| {
+        if let Ok(i) = '1'.drop(i) {
+            return Ok((i, P1));
+        }
+        if let Ok(i) = '2'.drop(i) {
+            return Ok((i, P2));
+        }
+        Err(())
+    };
+    let (i, p) = player(i)?;
+    let i = '.'.drop(i)?;
+    if let Ok(i) = "druzyna".drop(i) {
+        return Ok((i, p));
+    }
+    if let Ok(i) = "drużyna".drop(i) {
+        return Ok((i, p));
     }
     Err(())
 }
