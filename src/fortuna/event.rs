@@ -1,102 +1,21 @@
 use crate::shared::event;
 use eat::*;
+use event::Football::*;
 use event::Part;
 
 impl Eat<&str, (), [String; 2]> for event::Football {
     fn eat(i: &str, players: [String; 2]) -> Result<(&str, Self), ()> {
-        use event::Football::*;
         if let Ok((i, p)) = eat_player(i, players.clone()) {
-            if let Ok(result) = eat_event_player(i, p) {
-                return Ok(result);
-            }
+            return eat_event_player(i, p);
         }
         if let Ok((i, part)) = eat_part(i) {
-            if let Ok(i) = ' '.drop(i) {
-                if let Ok(i) = "liczba ".drop(i) {
-                    if let Ok(i) = "goli".drop(i) {
-                        return Ok((i, Goals(part)));
-                    }
-                    if let Ok(i) = "rzutów rożnych".drop(i) {
-                        return Ok((i, Corners(part)));
-                    }
-                    if let Ok(i) = eat_yellow(i) {
-                        return Ok((i, YellowCards(part)));
-                    }
-                }
-            }
-            if let Ok(i) = ": ".drop(i) {
-                if let Ok(i) = "liczba ".drop(i) {
-                    if let Ok(i) = "rzutów rożnych".drop(i) {
-                        return Ok((i, Corners(part)));
-                    }
-                }
-                if let Ok(i) = "przedział rzutów rożnych".drop(i) {
-                    return Ok((i, CornerRange(part)));
-                }
-                if let Ok(i) = "Multigole".drop(i) {
-                    return Ok((i, MultiGoals(part)));
-                }
-                if let Ok(i) = "dokładny wynik".drop(i) {
-                    return Ok((i, ExactScore(part)));
-                }
-                if let Ok(i) = "dokładna liczba goli".drop(i) {
-                    return Ok((i, ExactGoals(part)));
-                }
-                if let Ok(i) = "1.gol".drop(i) {
-                    return Ok((i, FirstGoal(part)));
-                }
-                if let Ok(i) = "handicap".drop(i) {
-                    return Ok((i, Handicap(part)));
-                }
-                if let Ok((i, p)) = eat_player(i, players) {
-                    if let Ok(i) = " przedział rzutów rożnych".drop(i) {
-                        return Ok((i, CornerRangePlayer(p, part)));
-                    }
-                }
-            }
-            if let Ok(i) = '/'.drop(i) {
-                if let Ok(i) = "spotkanie".drop(i) {
-                    return Ok((i, Meeting(part)));
-                }
-                if let Ok(i) = "mecz".drop(i) {
-                    return Ok((i, Match(part)));
-                }
-                if let Ok(i) = "Obie drużyny ".drop(i) {
-                    let i = "strzelą ".drop(i)?;
-                    if let Ok(i) = "gola".drop(i) {
-                        if let Ok(i) = ' '.drop(i) {
-                            if let Ok(i) = "w 1.połowie".drop(i) {
-                                return Ok((
-                                    i,
-                                    WinnerBothToScore(part, Part::FirstHalf),
-                                ));
-                            }
-                            if let Ok(i) = "w 2.połowie".drop(i) {
-                                return Ok((
-                                    i,
-                                    WinnerBothToScore(part, Part::SecondHalf),
-                                ));
-                            }
-                        }
-                    }
-                }
-                if let Ok((i, part2)) = eat_part(i) {
-                    if let Ok(i) = "Obie drużyny ".drop(i) {
-                        let i = "strzelą ".drop(i)?;
-                        if let Ok(i) = "gola".drop(i) {
-                            return Ok((i, Winner2BothToScore(part, part2)));
-                        }
-                    }
-                    return Ok((i, Winner2(part, part2)));
-                }
-            }
-            return Ok((i, Winner(part)));
+            return eat_event_part(i, part, players);
         }
         if let Ok(i) = "Dokładna liczba goli".drop(i) {
             return Ok((i, ExactGoals(Part::FullTime)));
         }
-        if let Ok(i) = "Obie drużyny ".drop(i) {
-            let i = "strzelą ".drop(i)?;
+        if let Ok(i) = eat_both(i) {
+            let i = " strzelą ".drop(i)?;
             if let Ok(i) = "gola".drop(i) {
                 if let Ok(i) = ' '.drop(i) {
                     if let Ok(i) = "w 1.połowie".drop(i) {
@@ -120,9 +39,6 @@ impl Eat<&str, (), [String; 2]> for event::Football {
         }
         if let Ok(i) = "Multigole".drop(i) {
             return Ok((i, MultiGoals(Part::FullTime)));
-        }
-        if let Ok(i) = "Spotkanie bez remisu".drop(i) {
-            return Ok((i, DrawNoBet));
         }
         if let Ok(i) = "Liczba ".drop(i) {
             if let Ok(i) = "goli".drop(i) {
@@ -183,7 +99,7 @@ impl Eat<&str, (), [String; 2]> for event::Football {
             return Ok((i, WinDiff));
         }
         if let Ok(i) = "1.rzut rożny w spotkaniu".drop(i) {
-            return Ok((i, FirstCorner));
+            return Ok((i, FirstCorner(Part::FullTime)));
         }
         if let Ok(i) = "Zawodnicy - strzały".drop(i) {
             if let Ok(i) = " celne".drop(i) {
@@ -194,10 +110,10 @@ impl Eat<&str, (), [String; 2]> for event::Football {
         if let Ok(i) = eat_more(i) {
             let i = ' '.drop(i)?;
             if let Ok(i) = "rzutów rożnych".drop(i) {
-                return Ok((i, MoreCorners));
+                return Ok((i, MoreCorners(Part::FullTime)));
             }
             if let Ok(i) = "strzałów w światło bramki".drop(i) {
-                return Ok((i, MoreCorners));
+                return Ok((i, MoreShotsOnTarget));
             }
             if let Ok(i) = "fauli".drop(i) {
                 return Ok((i, MoreFouls));
@@ -218,13 +134,20 @@ impl Eat<&str, (), [String; 2]> for event::Football {
         if let Ok(i) = "Będzie wynik w trakcie spotkania".drop(i) {
             return Ok((i, ResultDuringMatch));
         }
-        if let Ok(i) = "Spotkanie/".drop(i) {
-            if let Ok((i, p)) = eat_player(i, players.clone()) {
-                return Ok((i, MatchGoalsPlayer(p)));
+        if let Ok(i) = "Spotkanie".drop(i) {
+            if let Ok(i) = " bez remisu".drop(i) {
+                return Ok((i, DrawNoBet(Part::FullTime)));
             }
-            if let Ok((i, part)) = eat_part(i) {
-                if let Ok(i) = " liczba goli".drop(i) {
-                    return Ok((i, MatchGoals(part)));
+            if let Ok(i) = '/'.drop(i) {
+                if let Ok((i, p)) = eat_player(i, players.clone()) {
+                    if let Ok(i) = " liczba goli".drop(i) {
+                        return Ok((i, MatchGoalsPlayer(p)));
+                    }
+                }
+                if let Ok((i, part)) = eat_part(i) {
+                    if let Ok(i) = " liczba goli".drop(i) {
+                        return Ok((i, MatchGoals(part)));
+                    }
                 }
             }
         }
@@ -277,6 +200,12 @@ fn eat_more(i: &str) -> Result<&str, ()> {
     if let Ok(i) = "Więcej".drop(i) {
         return Ok(i);
     }
+    if let Ok(i) = "wiecej".drop(i) {
+        return Ok(i);
+    }
+    if let Ok(i) = "więcej".drop(i) {
+        return Ok(i);
+    }
     Err(())
 }
 
@@ -302,6 +231,134 @@ fn eat_player(
     }
     if let Ok(i) = p2.as_str().drop(i) {
         return Ok((i, P2));
+    }
+    Err(())
+}
+
+fn eat_event_part(
+    i: &str,
+    part: event::Part,
+    players: [String; 2],
+) -> Result<(&str, event::Football), ()> {
+    if let Ok(i) = ' '.drop(i) {
+        if let Ok(i) = "liczba ".drop(i) {
+            if let Ok(i) = "goli".drop(i) {
+                if let Ok(i) = '/'.drop(i) {
+                    if let Ok((i, part2)) = eat_part(i) {
+                        if let Ok(i) = " liczba goli".drop(i) {
+                            return Ok((i, Goals2(part, part2)));
+                        }
+                    }
+                }
+                return Ok((i, Goals(part)));
+            }
+            if let Ok(i) = "rzutów rożnych".drop(i) {
+                if let Ok(i) = " handicap".drop(i) {
+                    return Ok((i, CornersHandicap(part)));
+                }
+                return Ok((i, Corners(part)));
+            }
+            if let Ok(i) = eat_yellow(i) {
+                return Ok((i, YellowCards(part)));
+            }
+        }
+        if let Ok(i) = "bez remisu".drop(i) {
+            return Ok((i, DrawNoBet(part)));
+        }
+    }
+    if let Ok(i) = ": ".drop(i) {
+        if let Ok(i) = eat_more(i) {
+            if let Ok(i) = ' '.drop(i) {
+                if let Ok(i) = "rzutów rożnych".drop(i) {
+                    return Ok((i, MoreCorners(part)));
+                }
+            }
+        }
+        if let Ok(i) = "liczba ".drop(i) {
+            if let Ok(i) = "rzutów rożnych".drop(i) {
+                if let Ok(i) = " handicap".drop(i) {
+                    return Ok((i, CornersHandicap(part)));
+                }
+                return Ok((i, Corners(part)));
+            }
+        }
+        if let Ok(i) = "przedział rzutów rożnych".drop(i) {
+            return Ok((i, CornerRange(part)));
+        }
+        if let Ok(i) = "Multigole".drop(i) {
+            return Ok((i, MultiGoals(part)));
+        }
+        if let Ok(i) = "dokładny wynik".drop(i) {
+            return Ok((i, ExactScore(part)));
+        }
+        if let Ok(i) = "dokładna liczba goli".drop(i) {
+            return Ok((i, ExactGoals(part)));
+        }
+        if let Ok(i) = "1.gol".drop(i) {
+            return Ok((i, FirstGoal(part)));
+        }
+        if let Ok(i) = "1.rzut rożny".drop(i) {
+            return Ok((i, FirstCorner(part)));
+        }
+        if let Ok(i) = "handicap".drop(i) {
+            return Ok((i, Handicap(part)));
+        }
+        if let Ok((i, p)) = eat_player(i, players) {
+            if let Ok(i) = " przedział rzutów rożnych".drop(i) {
+                return Ok((i, CornerRangePlayer(p, part)));
+            }
+        }
+    }
+    if let Ok(i) = '/'.drop(i) {
+        if let Ok(i) = "spotkanie".drop(i) {
+            return Ok((i, Meeting(part)));
+        }
+        if let Ok(i) = "mecz".drop(i) {
+            if let Ok(i) = " i liczba goli".drop(i) {
+                return Ok((i, WinnerMatchAndGoals(part)));
+            }
+            return Ok((i, Match(part)));
+        }
+        if let Ok(i) = eat_both(i) {
+            let i = " strzelą ".drop(i)?;
+            if let Ok(i) = "gola".drop(i) {
+                if let Ok(i) = ' '.drop(i) {
+                    if let Ok(i) = "w 1.połowie".drop(i) {
+                        return Ok((
+                            i,
+                            WinnerBothToScore(part, Part::FirstHalf),
+                        ));
+                    }
+                    if let Ok(i) = "w 2.połowie".drop(i) {
+                        return Ok((
+                            i,
+                            WinnerBothToScore(part, Part::SecondHalf),
+                        ));
+                    }
+                }
+            }
+        }
+        if let Ok((i, part2)) = eat_part(i) {
+            if let Ok(i) = ' '.drop(i) {
+                if let Ok(i) = eat_both(i) {
+                    let i = " strzelą ".drop(i)?;
+                    if let Ok(i) = "gola".drop(i) {
+                        return Ok((i, Winner2BothToScore(part, part2)));
+                    }
+                }
+            }
+            return Ok((i, Winner2(part, part2)));
+        }
+    }
+    Ok((i, Winner(part)))
+}
+
+fn eat_both(i: &str) -> Result<&str, ()> {
+    if let Ok(i) = "Obie drużyny".drop(i) {
+        return Ok(i);
+    }
+    if let Ok(i) = "obie drużyny".drop(i) {
+        return Ok(i);
     }
     Err(())
 }
