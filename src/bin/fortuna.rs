@@ -1,6 +1,6 @@
 use eat::*;
 use fantoccini::ClientBuilder;
-use fortuna::{prematch::football, safe::safe_match};
+use fortuna::prematch::football;
 use odds::fortuna;
 use odds::shared;
 use odds::utils::{
@@ -54,7 +54,7 @@ async fn main() {
         let file = format!("downloads/{}", url.name());
         let _ = save(contents.as_bytes(), file).await;
         save_count += 1;
-        let Some(m) = safe_match(m) else {
+        let Some(m) = fortuna::safe::match_filter(m) else {
             continue;
         };
         let Some(contents) = shared::event::match_contents(&m) else {
@@ -70,6 +70,6 @@ async fn main() {
     println!("Total count: {}", total_count);
     println!("Download count: {}", download_count);
     println!("Save count: {}", save_count);
-    println!("Maybe safe save count: {}", maybe_safe_save_count);
+    println!("Save count (maybe safe): {}", maybe_safe_save_count);
     println!("{:.2?} / download", elapsed / download_count as f32);
 }

@@ -115,7 +115,7 @@ async fn main() {
     let files = read::files("maybe_safe").unwrap();
     let matches = files
         .filter_map(|file| event::eat_match(file.as_str()).ok())
-        .filter_map(fortuna::safe::football_match);
+        .filter_map(fortuna::event::football::translate_match);
     let matches: Vec<_> = matches.collect();
     if matches.is_empty() {
         println!("no matches");
