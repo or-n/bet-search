@@ -24,6 +24,9 @@ impl Eat<&str, (), [String; 2]> for event::Football {
                     if let Ok(i) = "w 2.połowie".drop(i) {
                         return Ok((i, BothToScore(Part::SecondHalf)));
                     }
+                    if let Ok(i) = "w tej samej połowie".drop(i) {
+                        return Ok((i, BothToScoreSameHalf));
+                    }
                 }
                 if let Ok(i) = "/liczba goli".drop(i) {
                     return Ok((i, BothToScoreGoals));
@@ -133,6 +136,9 @@ impl Eat<&str, (), [String; 2]> for event::Football {
         }
         if let Ok(i) = "Będzie wynik w trakcie spotkania".drop(i) {
             return Ok((i, ResultDuringMatch));
+        }
+        if let Ok(i) = "Nie będzie wyniku w trakcie spotkania".drop(i) {
+            return Ok((i, NotResultDuringMatch));
         }
         if let Ok(i) = "Spotkanie".drop(i) {
             if let Ok(i) = " bez remisu".drop(i) {
@@ -410,6 +416,9 @@ fn eat_event_player(
         }
         if let Ok(i) = eat_yellow(i) {
             return Ok((i, YellowCardsPlayer(p, Part::FullTime)));
+        }
+        if let Ok(i) = "spalonych".drop(i) {
+            return Ok((i, OffsidesPlayer(p)));
         }
     }
     if let Ok((i, part)) = eat_part(i) {

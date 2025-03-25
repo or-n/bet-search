@@ -1,6 +1,6 @@
 use eat::*;
 use fantoccini::ClientBuilder;
-use fortuna::prematch::football;
+use fortuna::{prematch::football, safe::safe_match};
 use odds::fortuna;
 use odds::shared;
 use odds::utils::{
@@ -30,6 +30,7 @@ async fn main() {
     let start = Instant::now();
     let mut download_count = 0;
     let mut save_count = 0;
+    let mut maybe_safe_save_count = 0;
     while let Some((subpage, date)) = queue.lock().await.pop() {
         if !date::in_hours(date, 12) {
             continue;
@@ -53,6 +54,15 @@ async fn main() {
         let file = format!("downloads/{}", url.name());
         let _ = save(contents.as_bytes(), file).await;
         save_count += 1;
+        let Some(m) = safe_match(m) else {
+            continue;
+        };
+        let Some(contents) = shared::event::match_contents(&m) else {
+            continue;
+        };
+        let file = format!("maybe_safe/{}", url.name());
+        let _ = save(contents.as_bytes(), file).await;
+        maybe_safe_save_count += 1;
     }
     client.close().await.unwrap();
     let elapsed = start.elapsed().as_secs_f32();
@@ -60,5 +70,6 @@ async fn main() {
     println!("Total count: {}", total_count);
     println!("Download count: {}", download_count);
     println!("Save count: {}", save_count);
+    println!("Maybe safe save count: {}", maybe_safe_save_count);
     println!("{:.2?} / download", elapsed / download_count as f32);
 }

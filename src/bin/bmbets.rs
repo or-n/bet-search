@@ -8,7 +8,7 @@ use odds::bmbets::{
 };
 use odds::fortuna;
 use odds::shared::event;
-use odds::utils::{browser, page::Name};
+use odds::utils::{browser, page::Name, read};
 use scraper::Html;
 use serde_json::{json, Map};
 use std::io;
@@ -112,7 +112,11 @@ async fn process_match(
 
 #[tokio::main]
 async fn main() {
-    let matches = fortuna::safe::get_safe_matches().await;
+    let files = read::files("maybe_safe").unwrap();
+    let matches = files
+        .filter_map(|file| event::eat_match(file.as_str()).ok())
+        .filter_map(fortuna::safe::football_match);
+    let matches: Vec<_> = matches.collect();
     if matches.is_empty() {
         println!("no matches");
         return;
