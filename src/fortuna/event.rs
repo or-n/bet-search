@@ -11,6 +11,14 @@ macro_rules! eat {
     };
 }
 
+macro_rules! eat2 {
+    ($i:ident, $text:expr) => {
+        if let Ok($i) = $text.drop($i) {
+            return Ok($i);
+        }
+    };
+}
+
 impl Eat<&str, (), [String; 2]> for event::Football {
     fn eat(i: &str, players: [String; 2]) -> Result<(&str, Self), ()> {
         if let Ok((i, p)) = eat_player(i, players.clone()) {
@@ -97,11 +105,13 @@ impl Eat<&str, (), [String; 2]> for event::Football {
         if let Ok(i) = "Mecz".drop(i) {
             eat!(i -> i, " + strzelcy goli", MatchScorePlayers);
             eat!(i -> i, " + strzały na bramkę", MatchShotsOnTarget);
-            eat!(i -> i, ": liczba rzutów rożnych", MatchCorners(Part::FullTime));
-            eat!(i -> i, ": która drużyna strzeli gola", PlayerToScore);
-            eat!(i -> i, ": więcej rzutów rożnych", MatchMoreCorners);
-            eat!(i -> i, ": Przedział rzutów rożnych", MatchCornerRange);
-            eat!(i -> i, ": Multiwynik", MatchMultiScore);
+            if let Ok(i) = ": ".drop(i) {
+                eat!(i -> i, "liczba rzutów rożnych", MatchCorners(Part::FullTime));
+                eat!(i -> i, "która drużyna strzeli gola", PlayerToScore);
+                eat!(i -> i, "więcej rzutów rożnych", MatchMoreCorners);
+                eat!(i -> i, "Przedział rzutów rożnych", MatchCornerRange);
+                eat!(i -> i, "Multiwynik", MatchMultiScore);
+            }
             eat!(i -> i, "/liczba goli", MatchGoals(Part::FullTime));
             eat!(i -> i, "/obie drużyny strzelą gola", MatchBothToScore);
         }
@@ -110,18 +120,10 @@ impl Eat<&str, (), [String; 2]> for event::Football {
 }
 
 fn eat_more(i: &str) -> Result<&str, ()> {
-    if let Ok(i) = "Wiecej".drop(i) {
-        return Ok(i);
-    }
-    if let Ok(i) = "Więcej".drop(i) {
-        return Ok(i);
-    }
-    if let Ok(i) = "wiecej".drop(i) {
-        return Ok(i);
-    }
-    if let Ok(i) = "więcej".drop(i) {
-        return Ok(i);
-    }
+    eat2!(i, "Wiecej");
+    eat2!(i, "Więcej");
+    eat2!(i, "wiecej");
+    eat2!(i, "więcej");
     Err(())
 }
 
@@ -223,12 +225,8 @@ fn eat_event_part(
 }
 
 fn eat_both(i: &str) -> Result<&str, ()> {
-    if let Ok(i) = "Obie drużyny".drop(i) {
-        return Ok(i);
-    }
-    if let Ok(i) = "obie drużyny".drop(i) {
-        return Ok(i);
-    }
+    eat2!(i, "Obie drużyny");
+    eat2!(i, "obie drużyny");
     Err(())
 }
 
@@ -279,12 +277,8 @@ fn eat_part(i: &str) -> Result<(&str, Part), ()> {
 
 fn eat_yellow(i: &str) -> Result<&str, ()> {
     let yellow = |i| {
-        if let Ok(i) = "zółtych".drop(i) {
-            return Ok(i);
-        }
-        if let Ok(i) = "żółtych".drop(i) {
-            return Ok(i);
-        }
+        eat2!(i, "zółtych");
+        eat2!(i, "żółtych");
         Err(())
     };
     let i = yellow(i)?;
