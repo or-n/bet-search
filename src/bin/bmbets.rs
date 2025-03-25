@@ -9,14 +9,12 @@ use odds::bmbets::{
 };
 use odds::fortuna;
 use odds::shared::event;
-use odds::utils::{browser, page::Name, read};
+use odds::utils::{browser, page::Name, read, save::save};
 use scraper::Html;
 use serde_json::{json, Map};
 use std::io;
 use std::io::Write;
 use std::time::Instant;
-use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
 
 fn get_id() -> Option<usize> {
     print!("choose: ");
@@ -62,10 +60,10 @@ async fn get_match(client: &mut Client, prompt: &str) -> Option<Hit> {
     Some(hits[id].clone())
 }
 
-async fn process_match(
-    m: &event::Match<Football, String>,
+async fn match_filter(
+    m: event::Match<Football, String>,
     client: &mut Client,
-) {
+) -> event::Match<Football, String> {
     let start = Instant::now();
     println!("{}", m.date.format("%Y-%m-%d %H:%M"));
     println!("{} - {}", m.players[0], m.players[1]);
@@ -75,15 +73,15 @@ async fn process_match(
     println!("Elapsed time: {:.2?}", start.elapsed());
     let start = Instant::now();
     client.goto(&hit.relative_url).await.unwrap();
-    let new_events = futures::stream::iter(m.events.iter()).filter_map(|e| {
+    let events = futures::stream::iter(m.events.iter()).filter_map(|e| {
         let mut client = client.clone();
         async move {
             match goto(&mut client, e).await {
-                Ok(new_e) => {
-                    if new_e.odds.is_empty() {
+                Ok(e) => {
+                    if e.odds.is_empty() {
                         return None;
                     }
-                    Some(new_e)
+                    Some(e)
                 }
                 Err(error) => {
                     println!("{:?}", e);
@@ -93,22 +91,14 @@ async fn process_match(
             }
         }
     });
-    let new_events: Vec<_> = new_events.collect().await;
-    let new_m = event::Match {
-        url: m.url.clone(),
-        date: m.date.clone(),
-        players: m.players.clone(),
-        events: new_events,
-    };
-    let Some(contents) = event::match_contents(&new_m) else {
-        return;
-    };
-    let r = fortuna::Url::eat(new_m.url.as_str(), ());
-    let (_i, url) = r.unwrap();
-    let path = format!("safe/{}", url.name());
-    let mut file = File::create(&path).await.unwrap();
-    file.write_all(contents.as_bytes()).await.unwrap();
+    let events: Vec<_> = events.collect().await;
     println!("Elapsed time: {:.2?}", start.elapsed());
+    event::Match {
+        url: m.url,
+        date: m.date,
+        players: m.players,
+        events,
+    }
 }
 
 #[tokio::main]
@@ -133,7 +123,18 @@ async fn main() {
         .await
         .unwrap();
     for m in matches {
-        process_match(&m, &mut client).await;
+        let m = match_filter(m, &mut client).await;
+        if m.events.is_empty() {
+            continue;
+        }
+        let Some(contents) = event::match_contents(&m) else {
+            continue;
+        };
+        let Ok((_i, url)) = fortuna::Url::eat(m.url.as_str(), ()) else {
+            continue;
+        };
+        let file = format!("safe/{}", url.name());
+        let _ = save(contents.as_bytes(), file).await;
     }
     client.close().await.unwrap();
 }
