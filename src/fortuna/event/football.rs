@@ -1,8 +1,8 @@
 use crate::shared::event;
 use eat::*;
-use event::Football::*;
-use event::Part;
+use event::football::{Football, Part, Player};
 use event::{Event, Match};
+use Football::*;
 
 macro_rules! eat {
     ($i:ident, $text:expr, $r:expr) => {
@@ -20,13 +20,12 @@ macro_rules! eat {
 fn translate_event(
     event: Event<String, String>,
     players: [String; 2],
-) -> Option<Event<event::Football, String>> {
+) -> Option<Event<Football, String>> {
     let i = event.id.as_str();
-    let r = event::Football::eat(i, players);
+    let r = Football::eat(i, players);
     if let Err(error) = r {
         println!("{} {:?}", i, error);
         println!("");
-        return None;
     }
     let (rest, id) = r.ok()?;
     if !rest.is_empty() {
@@ -43,7 +42,7 @@ fn translate_event(
 
 pub fn translate_match(
     m: Match<String, String>,
-) -> Option<Match<event::Football, String>> {
+) -> Option<Match<Football, String>> {
     let events: Vec<_> = m
         .events
         .into_iter()
@@ -60,7 +59,7 @@ pub fn translate_match(
     })
 }
 
-impl Eat<&str, (), [String; 2]> for event::Football {
+impl Eat<&str, (), [String; 2]> for Football {
     fn eat(i: &str, players: [String; 2]) -> Result<(&str, Self), ()> {
         if let Ok((i, p)) = eat_player(i, players.clone()) {
             return eat_event_player(i, p);
@@ -177,11 +176,8 @@ fn eat_more(i: &str) -> Result<&str, ()> {
     Err(())
 }
 
-fn eat_player(
-    i: &str,
-    [p1, p2]: [String; 2],
-) -> Result<(&str, event::Player), ()> {
-    use event::Player::*;
+fn eat_player(i: &str, [p1, p2]: [String; 2]) -> Result<(&str, Player), ()> {
+    use Player::*;
     eat!(i, p1.as_str(), P1);
     eat!(i, p2.as_str(), P2);
     let player = |i| {
@@ -198,9 +194,9 @@ fn eat_player(
 
 fn eat_event_part(
     i: &str,
-    part: event::Part,
+    part: Part,
     players: [String; 2],
-) -> Result<(&str, event::Football), ()> {
+) -> Result<(&str, Football), ()> {
     if let Ok(i) = ' '.drop(i) {
         if let Ok(i) = "liczba ".drop(i) {
             if let Ok(i) = "goli".drop(i) {
@@ -286,11 +282,8 @@ fn eat_both(i: &str) -> Result<&str, ()> {
     Err(())
 }
 
-fn eat_event_player(
-    i: &str,
-    p: event::Player,
-) -> Result<(&str, event::Football), ()> {
-    use event::Football::*;
+fn eat_event_player(i: &str, p: Player) -> Result<(&str, Football), ()> {
+    use Football::*;
     let i = ' '.drop(i)?;
     eat!(
         i,

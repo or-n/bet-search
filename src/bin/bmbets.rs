@@ -1,4 +1,5 @@
 use eat::*;
+use event::football::Football;
 use fantoccini::{Client, ClientBuilder};
 use futures::stream::StreamExt;
 use odds::bmbets::{
@@ -62,7 +63,7 @@ async fn get_match(client: &mut Client, prompt: &str) -> Option<Hit> {
 }
 
 async fn process_match(
-    m: &event::Match<event::Football, String>,
+    m: &event::Match<Football, String>,
     client: &mut Client,
 ) {
     let start = Instant::now();

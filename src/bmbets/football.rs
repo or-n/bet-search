@@ -1,8 +1,8 @@
 use crate::bmbets::menu;
 use crate::shared::event;
 use eat::*;
+use event::football::{Football, Part, Player};
 use event::Event;
-use event::Part;
 use fantoccini::{error::CmdError, Client};
 use futures::StreamExt;
 
@@ -26,28 +26,28 @@ pub enum Tab {
     Penalty,
 }
 
-pub fn tab(event: &event::Football) -> Option<Tab> {
-    use event::Football::*;
+pub fn tab(event: &Football) -> Option<Tab> {
+    use Football::*;
     use Tab::*;
     match event {
-        event::Football::Winner(_) => Some(Tab::Winner),
+        Football::Winner(_) => Some(Tab::Winner),
         Goals(_) => Some(TotalsGoals),
         GoalsPlayer(_, _) => Some(IndividualTotalGoals),
         ExactGoals(_) => Some(ExactGoalsNumber),
         BothToScore(_) => Some(BothTeamsToScore),
         Handicap(_) => Some(AsianHandicap),
-        event::Football::Corners(_) => Some(Tab::Corners),
+        Football::Corners(_) => Some(Tab::Corners),
         CornersPlayer(_, _) => Some(IndividualCorners),
         _ => None,
     }
 }
 
-pub fn toolbar(event: &event::Football) -> Option<Toolbar> {
-    use event::Football::*;
-    use event::Player::*;
+pub fn toolbar(event: &Football) -> Option<Toolbar> {
+    use Football::*;
+    use Player::*;
     use Toolbar::*;
     match event {
-        event::Football::Winner(part) => Some(Toolbar::Part_(*part)),
+        Football::Winner(part) => Some(Toolbar::Part_(*part)),
         Goals(part) => Some(Toolbar::Part_(*part)),
         GoalsPlayer(P1, part) => Some(Home(*part)),
         GoalsPlayer(P2, part) => Some(Away(*part)),
@@ -230,8 +230,8 @@ pub enum Error {
 
 pub async fn goto(
     client: &mut Client,
-    e: &Event<event::Football, String>,
-) -> Result<Event<event::Football, String>, Error> {
+    e: &Event<Football, String>,
+) -> Result<Event<Football, String>, Error> {
     use Error::*;
     menu::dropdown(client).await.map_err(TabList)?;
     let tab_element = menu::tab(client).await.map_err(TabList)?;
@@ -319,7 +319,7 @@ enum OverUnder {
     Under,
 }
 
-fn eat_variant(e: &event::Football, i: &str) -> Variant {
+fn eat_variant(e: &Football, i: &str) -> Variant {
     use OverUnder::*;
     if let Ok(i) = "mniej ".drop(i) {
         return overunder(e, i, Under);
@@ -336,8 +336,8 @@ fn eat_variant(e: &event::Football, i: &str) -> Variant {
     Variant::Unknown(i.to_string())
 }
 
-fn overunder(e: &event::Football, i: &str, x: OverUnder) -> Variant {
-    use event::Football::*;
+fn overunder(e: &Football, i: &str, x: OverUnder) -> Variant {
+    use Football::*;
     let s = i.to_string();
     match e {
         Goals(_) => Variant::Total(s, x),
