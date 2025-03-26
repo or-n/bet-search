@@ -4,19 +4,6 @@ use event::football::{Football, Part, Player};
 use event::{Event, Match};
 use Football::*;
 
-macro_rules! eat {
-    ($i:ident, $text:expr, $r:expr) => {
-        if let Ok($i) = $text.drop($i) {
-            return Ok(($i, $r));
-        }
-    };
-    ($i:ident, $text:expr) => {
-        if let Ok($i) = $text.drop($i) {
-            return Ok($i);
-        }
-    };
-}
-
 fn translate_event(
     event: Event<String, String>,
     players: [String; 2],
@@ -283,7 +270,6 @@ fn eat_both(i: &str) -> Result<&str, ()> {
 }
 
 fn eat_event_player(i: &str, p: Player) -> Result<(&str, Football), ()> {
-    use Football::*;
     let i = ' '.drop(i)?;
     eat!(
         i,

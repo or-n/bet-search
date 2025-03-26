@@ -127,10 +127,10 @@ async fn main() {
         if m.events.is_empty() {
             continue;
         }
-        let Some(contents) = event::match_contents(&m) else {
+        let Ok((_i, url)) = fortuna::Url::eat(m.url.as_str(), ()) else {
             continue;
         };
-        let Ok((_i, url)) = fortuna::Url::eat(m.url.as_str(), ()) else {
+        let Some(contents) = event::match_contents(&m) else {
             continue;
         };
         let file = format!("safe/{}", url.name());
