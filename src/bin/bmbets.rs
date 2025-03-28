@@ -1,19 +1,21 @@
 use eat::*;
-use event::football::Football;
+use event::{football::Football, Event};
 use fantoccini::{Client, ClientBuilder};
 use futures::stream::StreamExt;
-use odds::bmbets::{
-    football::goto,
-    search::{find_match, hits, Hit},
-    URL,
+use io::Write;
+use odds::{
+    bmbets::{
+        football::goto,
+        search::{find_match, hits, Hit},
+        URL,
+    },
+    fortuna,
+    shared::event,
+    utils::{browser, page::Name, read, save::save},
 };
-use odds::fortuna;
-use odds::shared::event;
-use odds::utils::{browser, page::Name, read, save::save};
 use scraper::Html;
 use serde_json::{json, Map};
 use std::io;
-use std::io::Write;
 use std::time::Instant;
 
 fn get_id() -> Option<usize> {
@@ -64,13 +66,10 @@ async fn match_filter(
     m: event::Match<Football, String>,
     client: &mut Client,
 ) -> event::Match<Football, String> {
-    let start = Instant::now();
     println!("{}", m.date.format("%Y-%m-%d %H:%M"));
     println!("{} - {}", m.players[0], m.players[1]);
     let hit = get_hit(client).await;
-    println!("{} - {}", hit.players[0], hit.players[1]);
     println!("{}{}", URL, hit.relative_url);
-    println!("Elapsed time: {:.2?}", start.elapsed());
     let start = Instant::now();
     client.goto(&hit.relative_url).await.unwrap();
     let events = futures::stream::iter(m.events.iter()).filter_map(|e| {
@@ -101,12 +100,24 @@ async fn match_filter(
     }
 }
 
+fn filter_event(
+    event: Event<Football, String>,
+) -> Option<Event<Football, String>> {
+    use Football::*;
+    if !matches!(event.id, Goals(_)) {
+        return None;
+    }
+    Some(event)
+}
+
 #[tokio::main]
 async fn main() {
     let files = read::files("maybe_safe").unwrap();
     let matches = files
         .filter_map(|file| event::eat_match(file.as_str()).ok())
-        .filter_map(fortuna::event::football::translate_match);
+        .filter_map(|m| {
+            fortuna::event::football::translate_match(m, filter_event)
+        });
     let matches: Vec<_> = matches.collect();
     if matches.is_empty() {
         println!("no matches");

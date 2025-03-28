@@ -68,54 +68,26 @@ pub fn toolbar(event: &Football) -> Option<Toolbar> {
 impl Eat<&str, (), ()> for Tab {
     fn eat(i: &str, _data: ()) -> Result<(&str, Self), ()> {
         use Tab::*;
-        if let Ok(i) = "1x2".drop(i) {
-            return Ok((i, Winner));
-        }
-        if let Ok(i) = "Asian Handicap".drop(i) {
-            return Ok((i, AsianHandicap));
-        }
-        if let Ok(i) = "European Handicap".drop(i) {
-            return Ok((i, EuropeanHandicap));
-        }
-        if let Ok(i) = "Corners".drop(i) {
-            return Ok((i, Corners));
-        }
-        if let Ok(i) = "Total Goals By Intervals".drop(i) {
-            return Ok((i, TotalGoalsByIntervals));
-        }
-        if let Ok(i) = "Total Goals Number By Range".drop(i) {
-            return Ok((i, TotalGoalsNumberByRange));
-        }
-        if let Ok(i) = "Total Goals/Both Teams To Score".drop(i) {
-            return Ok((i, TotalGoalsBothTeamsToScore));
-        }
-        if let Ok(i) = "Totals Goals".drop(i) {
-            return Ok((i, TotalsGoals));
-        }
-        if let Ok(i) = "Double Chance".drop(i) {
-            return Ok((i, DoubleChance));
-        }
-        if let Ok(i) = "Cards".drop(i) {
-            return Ok((i, Cards));
-        }
-        if let Ok(i) = "Individual Total Goals".drop(i) {
-            return Ok((i, IndividualTotalGoals));
-        }
-        if let Ok(i) = "Individual Corners".drop(i) {
-            return Ok((i, IndividualCorners));
-        }
-        if let Ok(i) = "Both Teams To Score".drop(i) {
-            return Ok((i, BothTeamsToScore));
-        }
-        if let Ok(i) = "Draw No Bet".drop(i) {
-            return Ok((i, DrawNoBet));
-        }
-        if let Ok(i) = "Exact Goals Number".drop(i) {
-            return Ok((i, ExactGoalsNumber));
-        }
-        if let Ok(i) = "Penalty".drop(i) {
-            return Ok((i, Penalty));
-        }
+        eat!(i, "1x2", Winner);
+        eat!(i, "Asian Handicap", AsianHandicap);
+        eat!(i, "European Handicap", EuropeanHandicap);
+        eat!(i, "Corners", Corners);
+        eat!(i, "Total Goals By Intervals", TotalGoalsByIntervals);
+        eat!(i, "Total Goals Number By Range", TotalGoalsNumberByRange);
+        eat!(
+            i,
+            "Total Goals/Both Teams To Score",
+            TotalGoalsBothTeamsToScore
+        );
+        eat!(i, "Totals Goals", TotalsGoals);
+        eat!(i, "Double Chance", DoubleChance);
+        eat!(i, "Cards", Cards);
+        eat!(i, "Individual Total Goals", IndividualTotalGoals);
+        eat!(i, "Individual Corners", IndividualCorners);
+        eat!(i, "Both Teams To Score", BothTeamsToScore);
+        eat!(i, "Draw No Bet", DrawNoBet);
+        eat!(i, "Exact Goals Number", ExactGoalsNumber);
+        eat!(i, "Penalty", Penalty);
         Err(())
     }
 }
@@ -136,15 +108,9 @@ pub enum Toolbar {
 impl Eat<&str, (), ()> for Toolbar {
     fn eat(i: &str, _data: ()) -> Result<(&str, Self), ()> {
         use Toolbar::*;
-        if let Ok(i) = "Full Time".drop(i) {
-            return Ok((i, Part_(Part::FullTime)));
-        }
-        if let Ok(i) = "1st Half".drop(i) {
-            return Ok((i, Part_(Part::FirstHalf)));
-        }
-        if let Ok(i) = "2nd Half".drop(i) {
-            return Ok((i, Part_(Part::SecondHalf)));
-        }
+        eat!(i, "Full Time", Part_(Part::FullTime));
+        eat!(i, "1st Half", Part_(Part::FirstHalf));
+        eat!(i, "2nd Half", Part_(Part::SecondHalf));
         if let Ok(i) = "1x2".drop(i) {
             let (i, part) = Part::eat(i, true)?;
             return Ok((i, Winner(part)));
@@ -181,26 +147,16 @@ impl Eat<&str, (), ()> for Toolbar {
 }
 
 impl Eat<&str, (), bool> for Part {
-    fn eat(i: &str, data: bool) -> Result<(&str, Self), ()> {
+    fn eat(i: &str, parens: bool) -> Result<(&str, Self), ()> {
         use Part::*;
-        if data {
-            if let Ok(i) = " (H1)".drop(i) {
-                return Ok((i, FirstHalf));
-            }
-            if let Ok(i) = " (H2)".drop(i) {
-                return Ok((i, SecondHalf));
-            }
+        if parens {
+            eat!(i, " (H1)", FirstHalf);
+            eat!(i, " (H2)", SecondHalf);
             Ok((i, FullTime))
         } else {
-            if let Ok(i) = " FT".drop(i) {
-                return Ok((i, FullTime));
-            }
-            if let Ok(i) = " H1".drop(i) {
-                return Ok((i, FirstHalf));
-            }
-            if let Ok(i) = " H2".drop(i) {
-                return Ok((i, SecondHalf));
-            }
+            eat!(i, " FT", FullTime);
+            eat!(i, " H1", FirstHalf);
+            eat!(i, " H2", SecondHalf);
             Err(())
         }
     }
@@ -226,6 +182,12 @@ pub enum Error {
     ToolbarClick(Toolbar, CmdError),
     #[error("Divs")]
     Divs(CmdError),
+}
+
+fn chances(x: &Vec<f32>) -> Vec<f32> {
+    let y = x.into_iter().map(|x| 1. / x);
+    let s = 1. / y.clone().sum::<f32>();
+    y.map(|x| x * s).collect()
 }
 
 pub async fn goto(
@@ -261,17 +223,17 @@ pub async fn goto(
         .map_err(|x| ToolbarClick(toolbar.clone(), x))?;
     let content = menu::odds_content(client).await.map_err(Divs)?;
     let divs = menu::odds_divs(content).await.map_err(Divs)?;
-    println!("{:?} {:?} {:?} {}", e, tab_name, toolbar_name, divs.len());
-    let new_odds =
-        futures::stream::iter(e.odds.iter()).filter_map(|(variant, odd)| {
-            let x = eat_variant(&e.id, &variant);
+    println!("{:?} {:?} {:?}", e, tab_name, toolbar_name);
+    let odds = futures::stream::iter(e.odds.iter()).filter_map(
+        |(variant_text, odd)| {
+            let variant = eat_variant(&e.id, variant_text.as_str());
             let divs = divs.clone();
             async move {
-                if let Variant::Unknown(_) = x {
+                if let Variant::Unknown(_) = variant {
                     return None;
                 }
-                let name = x.table_name();
-                println!("{:?} {} {}", x, name, odd);
+                let name = variant.table_name();
+                println!("{:?} {:?}", variant, name);
                 if let Some((_, div)) = divs.iter().find(|(n, _)| *n == name) {
                     let table = menu::odds_table(div.clone())
                         .await
@@ -289,20 +251,29 @@ pub async fn goto(
                             panic!()
                         }
                     }
+                    let books =
+                        table.iter().map(|(book, _)| format!("{}", book));
+                    let books: Vec<_> = books.collect();
+                    println!("{}", books.join(" "));
                     sum.iter_mut().for_each(|sum| *sum /= table.len() as f32);
                     let mean = sum;
-                    let mean_odd = x.choose_odd(&mean);
-                    println!("{:?} {}", mean, mean_odd);
+                    let chances = chances(&mean);
+                    let mean_chance = variant.choose(&chances);
+                    let value = odd * mean_chance;
+                    println!("{:?} {:?} {}", mean, chances, value);
+                    if value > 1. {
+                        return Some((variant_text.clone(), *odd));
+                    }
                 }
-                None::<(String, f32)>
+                None
             }
-        });
-    let new_odds = new_odds.collect().await;
-    let new_e = Event {
+        },
+    );
+    let odds = odds.collect().await;
+    Ok(Event {
         id: e.id.clone(),
-        odds: new_odds,
-    };
-    Ok(new_e)
+        odds,
+    })
 }
 
 #[allow(dead_code)]
@@ -319,24 +290,23 @@ enum OverUnder {
     Under,
 }
 
-fn eat_variant(e: &Football, i: &str) -> Variant {
+fn overunder(i: &str) -> Result<(&str, OverUnder), ()> {
     use OverUnder::*;
-    if let Ok(i) = "mniej ".drop(i) {
-        return overunder(e, i, Under);
-    }
-    if let Ok(i) = "Mniej ".drop(i) {
-        return overunder(e, i, Under);
-    }
-    if let Ok(i) = "wiecej ".drop(i) {
-        return overunder(e, i, Over);
-    }
-    if let Ok(i) = "Wiecej ".drop(i) {
-        return overunder(e, i, Over);
+    eat!(i, "mniej", Under);
+    eat!(i, "Mniej", Under);
+    eat!(i, "wiecej", Over);
+    eat!(i, "Wiecej", Over);
+    Err(())
+}
+
+fn eat_variant(e: &Football, i: &str) -> Variant {
+    if let Ok((i, x)) = overunder(i) {
+        return overunder_variant(e, i, x);
     }
     Variant::Unknown(i.to_string())
 }
 
-fn overunder(e: &Football, i: &str, x: OverUnder) -> Variant {
+fn overunder_variant(e: &Football, i: &str, x: OverUnder) -> Variant {
     use Football::*;
     let s = i.to_string();
     match e {
@@ -347,10 +317,11 @@ fn overunder(e: &Football, i: &str, x: OverUnder) -> Variant {
 }
 
 pub fn pos_line(x: &String) -> String {
-    if x.chars().next() == Some('-') {
-        x.clone()
+    let trim = x.trim();
+    if trim.chars().next() == Some('-') {
+        trim.to_string()
     } else {
-        format!("+{}", x)
+        format!("+{}", trim)
     }
 }
 
@@ -364,12 +335,12 @@ impl Variant {
         }
     }
 
-    pub fn choose_odd(&self, odds: &Vec<f32>) -> f32 {
+    pub fn choose(&self, values: &Vec<f32>) -> f32 {
         use OverUnder::*;
         use Variant::*;
         match self {
-            Total(_, Over) => odds[0],
-            Total(_, Under) => odds[1],
+            Total(_, Over) => values[0],
+            Total(_, Under) => values[1],
             _ => panic!(),
         }
     }

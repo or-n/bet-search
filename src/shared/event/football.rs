@@ -60,6 +60,7 @@ pub enum Football {
     MoreYellowCards,
     MoreFouls,
     MatchMoreCorners,
+    Minute15,
     Minute30,
     Minute60,
     Minute75,
@@ -75,6 +76,8 @@ pub enum Football {
     WillBeLosingBut,
     Meeting(Part),
     Match(Part),
+    ToAdvance,
+    AdvanceBy,
 }
 
 #[derive(Debug, Clone)]

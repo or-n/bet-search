@@ -4,15 +4,16 @@ use event::football::{Football, Part, Player};
 use event::{Event, Match};
 use Football::*;
 
-fn translate_event(
+pub fn translate_event(
     event: Event<String, String>,
     players: [String; 2],
+    url: String,
 ) -> Option<Event<Football, String>> {
     let i = event.id.as_str();
     let r = Football::eat(i, players);
     if let Err(error) = r {
         println!("{} {:?}", i, error);
-        println!("");
+        println!("{}", url);
     }
     let (rest, id) = r.ok()?;
     if !rest.is_empty() {
@@ -29,12 +30,16 @@ fn translate_event(
 
 pub fn translate_match(
     m: Match<String, String>,
+    filter_event: impl Fn(
+        Event<Football, String>,
+    ) -> Option<Event<Football, String>>,
 ) -> Option<Match<Football, String>> {
-    let events: Vec<_> = m
-        .events
-        .into_iter()
-        .filter_map(|event| translate_event(event, m.players.clone()))
-        .collect();
+    let events = m.events.into_iter();
+    let events = events.filter_map(|event| {
+        translate_event(event, m.players.clone(), m.url.clone())
+    });
+    let events = events.filter_map(filter_event);
+    let events: Vec<_> = events.collect();
     if events.is_empty() {
         return None;
     }
@@ -114,6 +119,7 @@ impl Eat<&str, (), [String; 2]> for Football {
                 return Ok((i, MoreYellowCards));
             }
         }
+        eat!(i, "1-15 minuta spotkania", Minute15);
         eat!(i, "1-30 minuta spotkania", Minute30);
         eat!(i, "1-60 minuta spotkania", Minute60);
         eat!(i, "1-75 minuta spotkania", Minute75);
@@ -151,6 +157,8 @@ impl Eat<&str, (), [String; 2]> for Football {
             eat!(i, "/liczba goli", MatchGoals(Part::FullTime));
             eat!(i, "/obie drużyny strzelą gola", MatchBothToScore);
         }
+        eat!(i, "Awans", ToAdvance);
+        eat!(i, "Sposób awansu", AdvanceBy);
         Err(())
     }
 }
