@@ -1,5 +1,5 @@
 use eat::*;
-use event::{football::Football, Event};
+use event::{football::Football, Event, Match};
 use fantoccini::{Client, ClientBuilder};
 use futures::stream::StreamExt;
 use io::Write;
@@ -16,31 +16,38 @@ use odds::{
 use scraper::Html;
 use serde_json::{json, Map};
 use std::io;
-use std::time::Instant;
 
-fn get_id() -> Option<usize> {
+fn get_id() -> Option<Option<usize>> {
     print!("choose: ");
     io::stdout().flush().unwrap();
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
-    input.trim().parse().ok()
+    let trim = input.trim();
+    if trim == "-" {
+        return Some(None);
+    }
+    trim.parse().ok().map(Some)
 }
 
-async fn get_hit(client: &mut Client) -> Hit {
+async fn get_hit(client: &mut Client, m: &Match<Football, String>) -> Hit {
     loop {
+        println!("{}", m.date.format("%Y-%m-%d %H:%M"));
+        println!("{} - {}", m.players[0], m.players[1]);
         print!("search: ");
         io::stdout().flush().unwrap();
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
-        let Some(hit) = get_match(client, &input).await else {
+        let Some(result) = get_match(client, &input).await else {
             println!("no hits");
             continue;
         };
-        return hit;
+        if let Some(hit) = result {
+            return hit;
+        }
     }
 }
 
-async fn get_match(client: &mut Client, prompt: &str) -> Option<Hit> {
+async fn get_match(client: &mut Client, prompt: &str) -> Option<Option<Hit>> {
     let html = find_match(client, prompt).await.unwrap();
     let document = Html::parse_document(&html);
     let hits = hits(document);
@@ -55,22 +62,24 @@ async fn get_match(client: &mut Client, prompt: &str) -> Option<Hit> {
             hit.players[1]
         );
     }
-    let mut id = get_id()?;
+    let Some(mut id) = get_id()? else {
+        return Some(None);
+    };
     while id >= hits.len() {
-        id = get_id()?;
+        match get_id()? {
+            Some(new_id) => id = new_id,
+            _ => return Some(None),
+        }
     }
-    Some(hits[id].clone())
+    Some(Some(hits[id].clone()))
 }
 
 async fn match_filter(
-    m: event::Match<Football, String>,
+    m: Match<Football, String>,
     client: &mut Client,
-) -> event::Match<Football, String> {
-    println!("{}", m.date.format("%Y-%m-%d %H:%M"));
-    println!("{} - {}", m.players[0], m.players[1]);
-    let hit = get_hit(client).await;
+) -> Match<Football, String> {
+    let hit = get_hit(client, &m).await;
     println!("{}{}", URL, hit.relative_url);
-    let start = Instant::now();
     client.goto(&hit.relative_url).await.unwrap();
     let events = futures::stream::iter(m.events.iter()).filter_map(|e| {
         let mut client = client.clone();
@@ -91,8 +100,7 @@ async fn match_filter(
         }
     });
     let events: Vec<_> = events.collect().await;
-    println!("Elapsed time: {:.2?}", start.elapsed());
-    event::Match {
+    Match {
         url: m.url,
         date: m.date,
         players: m.players,

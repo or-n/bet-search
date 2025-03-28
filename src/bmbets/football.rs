@@ -248,20 +248,20 @@ pub async fn goto(
                                 .zip(odds.iter())
                                 .for_each(|(sum, odd)| *sum += odd);
                         } else {
-                            panic!()
+                            panic!() //happens
                         }
                     }
                     let books =
                         table.iter().map(|(book, _)| format!("{}", book));
                     let books: Vec<_> = books.collect();
-                    println!("{}", books.join(" "));
                     sum.iter_mut().for_each(|sum| *sum /= table.len() as f32);
                     let mean = sum;
                     let chances = chances(&mean);
                     let mean_chance = variant.choose(&chances);
                     let value = odd * mean_chance;
-                    println!("{:?} {:?} {}", mean, chances, value);
                     if value > 1. {
+                        println!("{}", books.join(" "));
+                        println!("{:?} {:?} {}", mean, chances, value);
                         return Some((variant_text.clone(), *odd));
                     }
                 }
