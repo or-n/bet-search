@@ -29,7 +29,10 @@ fn get_id() -> Option<Option<usize>> {
     trim.parse().ok().map(Some)
 }
 
-async fn get_hit(client: &mut Client, m: &Match<Football, String>) -> Hit {
+async fn get_hit(
+    client: &mut Client,
+    m: &Match<Football, String>,
+) -> Option<Hit> {
     loop {
         println!("{}", m.date.format("%Y-%m-%d %H:%M"));
         println!("{} - {}", m.players[0], m.players[1]);
@@ -37,12 +40,15 @@ async fn get_hit(client: &mut Client, m: &Match<Football, String>) -> Hit {
         io::stdout().flush().unwrap();
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
+        if input.trim() == "skip" {
+            return None;
+        }
         let Some(result) = get_match(client, &input).await else {
             println!("no hits");
             continue;
         };
         if let Some(hit) = result {
-            return hit;
+            return Some(hit);
         }
     }
 }
@@ -76,10 +82,9 @@ async fn get_match(client: &mut Client, prompt: &str) -> Option<Option<Hit>> {
 
 async fn match_filter(
     m: Match<Football, String>,
+    hit: &Hit,
     client: &mut Client,
 ) -> Match<Football, String> {
-    let hit = get_hit(client, &m).await;
-    println!("{}{}", URL, hit.relative_url);
     client.goto(&hit.relative_url).await.unwrap();
     let events = futures::stream::iter(m.events.iter()).filter_map(|e| {
         let mut client = client.clone();
@@ -142,13 +147,18 @@ async fn main() {
         .await
         .unwrap();
     for m in matches {
-        let m = match_filter(m, &mut client).await;
+        let Some(hit) = get_hit(&mut client, &m).await else {
+            continue;
+        };
+        let m = match_filter(m, &hit, &mut client).await;
         if m.events.is_empty() {
             continue;
         }
         let Ok((_i, url)) = fortuna::Url::eat(m.url.as_str(), ()) else {
             continue;
         };
+        println!("{}", m.url);
+        println!("{}{}", URL, hit.relative_url);
         let Some(contents) = event::match_contents(&m) else {
             continue;
         };

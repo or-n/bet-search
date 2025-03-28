@@ -259,7 +259,7 @@ pub async fn goto(
                     let chances = chances(&mean);
                     let mean_chance = variant.choose(&chances);
                     let value = odd * mean_chance;
-                    if value > 1. {
+                    if value > 0.97 {
                         println!("{}", books.join(" "));
                         println!("{:?} {:?} {}", mean, chances, value);
                         return Some((variant_text.clone(), *odd));
