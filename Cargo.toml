@@ -21,6 +21,10 @@ name = "fortuna"
 path = "src/bin/fortuna.rs"
 
 [[bin]]
+name = "sts"
+path = "src/bin/sts.rs"
+
+[[bin]]
 name = "bmbets"
 path = "src/bin/bmbets.rs"
 
