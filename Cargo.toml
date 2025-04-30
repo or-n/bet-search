@@ -15,6 +15,7 @@ tokio = { version = "1.37.0", features = ["full"] }
 eat = { git = "https://github.com/or-n/rust-minimalist-utils.git" }
 chrono = "0.4.40"
 tokio-tungstenite = "0.26.2"
+surrealdb = "2.2.2"
 
 [[bin]]
 name = "fortuna"

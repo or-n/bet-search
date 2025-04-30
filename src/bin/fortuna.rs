@@ -10,13 +10,34 @@ use odds::utils::{
     save::save,
 };
 use shared::book::Subpages;
+use std::env;
 use std::sync::Arc;
 use std::time::Instant;
+use surrealdb::engine::remote::ws::Ws;
+use surrealdb::opt::auth::Root;
+use surrealdb::Surreal;
 use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
     let start = Instant::now();
+    let url = env::var("DB_URL").expect("DB_URL");
+    let user = env::var("DB_USERNAME").expect("DB_USERNAME");
+    let pass = env::var("DB_PASSWORD").expect("DB_PASSWORD");
+    println!("{} {} {}", url, user, pass);
+    let db = Surreal::new::<Ws>(&url).await.expect("DB connect");
+    println!("connected");
+    db.signin(Root {
+        username: &user,
+        password: &pass,
+    })
+    .await
+    .expect("DB auth");
+    println!("setting namespace");
+    db.use_ns("bet").use_db("bet").await.expect("DB namespace");
+    println!("querying");
+    let result = db.query("INFO FOR DB").await.expect("DB INFO");
+    println!("{:#?}", result);
     let mut client = ClientBuilder::native()
         .connect(&browser::localhost(4444))
         .await
