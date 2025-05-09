@@ -16,6 +16,7 @@ eat = { git = "https://github.com/or-n/rust-minimalist-utils.git" }
 chrono = "0.4.40"
 tokio-tungstenite = "0.26.2"
 surrealdb = "2.2.2"
+dotenv = "0.15.0"
 
 [[bin]]
 name = "fortuna"

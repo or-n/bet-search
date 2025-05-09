@@ -1,3 +1,4 @@
+use dotenv::dotenv;
 use eat::*;
 use fantoccini::ClientBuilder;
 use fortuna::prematch::football;
@@ -21,6 +22,7 @@ use tokio::sync::Mutex;
 #[tokio::main]
 async fn main() {
     let start = Instant::now();
+    dotenv().ok();
     let url = env::var("DB_URL").expect("DB_URL");
     let user = env::var("DB_USERNAME").expect("DB_USERNAME");
     let pass = env::var("DB_PASSWORD").expect("DB_PASSWORD");
