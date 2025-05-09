@@ -58,41 +58,37 @@ impl Tag<Page, Html> {
         split2(name, " - ")
     }
 
-    pub fn result_event(&self) -> Event<String, String> {
+    pub fn result_event(&self) -> Option<Event<String, String>> {
         let table = Selector::parse("table.events-table").unwrap();
         let head = Selector::parse("thead").unwrap();
         let body = Selector::parse("tbody").unwrap();
         let id = Selector::parse("span.market-sub-name").unwrap();
         let odds_name = Selector::parse("span.odds-name").unwrap();
         let odds_value = Selector::parse("span.odds-value").unwrap();
-        self.inner()
-            .select(&table)
-            .next()
-            .map(|table| {
-                let (id, names) = table
-                    .select(&head)
-                    .next()
-                    .map(|x| {
-                        let id = x.select(&id).next().map(main_text).unwrap();
-                        let names: Vec<_> =
-                            x.select(&odds_name).map(main_text).collect();
-                        (id, names)
-                    })
-                    .unwrap();
-                let values: Vec<f32> = table
-                    .select(&body)
-                    .next()
-                    .map(|x| {
-                        x.select(&odds_value)
-                            .map(|n| clean_text(n.text()))
-                            .filter_map(|v| v.parse::<f32>().ok())
-                            .collect()
-                    })
-                    .unwrap();
-                let odds: Vec<_> = names.into_iter().zip(values).collect();
-                Event { id, odds }
-            })
-            .unwrap()
+        self.inner().select(&table).next().map(|table| {
+            let (id, names) = table
+                .select(&head)
+                .next()
+                .map(|x| {
+                    let id = x.select(&id).next().map(main_text).unwrap();
+                    let names: Vec<_> =
+                        x.select(&odds_name).map(main_text).collect();
+                    (id, names)
+                })
+                .unwrap();
+            let values: Vec<f32> = table
+                .select(&body)
+                .next()
+                .map(|x| {
+                    x.select(&odds_value)
+                        .map(|n| clean_text(n.text()))
+                        .filter_map(|v| v.parse::<f32>().ok())
+                        .collect()
+                })
+                .unwrap();
+            let odds: Vec<_> = names.into_iter().zip(values).collect();
+            Event { id, odds }
+        })
     }
 
     pub fn events(&self) -> Vec<Event<String, String>> {
@@ -129,8 +125,8 @@ impl Tag<Page, Html> {
                 Event { id: name, odds }
             })
             .collect();
-        let result_event = self.result_event();
-        std::iter::once(result_event)
+        self.result_event()
+            .into_iter()
             .chain(rest.into_iter())
             .collect()
     }

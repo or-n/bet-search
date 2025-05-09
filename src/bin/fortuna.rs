@@ -33,11 +33,9 @@ async fn main() {
     })
     .await
     .expect("DB auth");
-    println!("setting namespace");
     db.use_ns("bet").use_db("bet").await.expect("DB namespace");
-    println!("querying");
-    let result = db.query("INFO FOR DB").await.expect("DB INFO");
-    println!("{:#?}", result);
+    // let result = db.query("INFO FOR DB").await.expect("DB INFO");
+    // println!("{:#?}", result);
     let mut client = ClientBuilder::native()
         .connect(&browser::localhost(4444))
         .await
