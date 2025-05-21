@@ -1,7 +1,9 @@
+pub mod football;
+
+use crate::shared::db::ToDBRecord;
 use crate::utils::{date, scrape::split2};
 use eat::*;
 use std::fmt::{Debug, Display};
-pub mod football;
 
 fn eat_pair(i: &str) -> Result<(&str, (String, String)), ()> {
     let i = '('.drop(i)?;
@@ -30,6 +32,43 @@ pub struct Match<T1, T2> {
     pub date: chrono::NaiveDateTime,
     pub players: [String; 2],
     pub events: Vec<Event<T1, T2>>,
+}
+
+impl<T1, T2> Match<T1, T2> {
+    pub fn get_id(&self) -> String {
+        let p1 = sanitize(self.players[0].as_str());
+        let p2 = sanitize(self.players[1].as_str());
+        format!("{p1}_vs_{p2}")
+    }
+}
+
+fn sanitize(x: &str) -> String {
+    x.chars()
+        .map(|c| match c {
+            'ą' => 'a',
+            'ć' => 'c',
+            'ę' => 'e',
+            'ł' => 'l',
+            'ń' => 'n',
+            'ó' => 'o',
+            'ś' => 's',
+            'ź' => 'z',
+            'ż' => 'z',
+            'Ą' => 'A',
+            'Ć' => 'C',
+            'Ę' => 'E',
+            'Ł' => 'L',
+            'Ń' => 'N',
+            'Ó' => 'O',
+            'Ś' => 'S',
+            'Ź' => 'Z',
+            'Ż' => 'Z',
+            ' ' => '_',
+            'á' => 'a',
+            _ => c,
+        })
+        .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
+        .collect()
 }
 
 pub fn eat_match(i: &str) -> Result<Match<String, String>, ()> {
@@ -89,4 +128,12 @@ where
         m.players[1],
         events.join("\n\n")
     ))
+}
+
+pub fn match_events_to_db<T1: ToDBRecord, T2>(
+    m: &Match<T1, T2>,
+) -> Vec<String> {
+    let events = m.events.iter().map(|x| x.id.to_db_record());
+    let events: Option<Vec<_>> = events.collect();
+    events.unwrap_or(vec![])
 }

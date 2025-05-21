@@ -139,6 +139,7 @@ impl Eat<&str, (), [String; 2]> for Football {
                     eat!(i, " liczba goli", MatchGoals(part));
                 }
             }
+            return Ok((i, Winner(Part::FullTime)));
         }
         eat!(i, "Przedział goli", GoalRange);
         eat!(i, "Zawodnik rezerwowy strzeli gola (nie wystąpi od początku spotkania)",
@@ -156,6 +157,7 @@ impl Eat<&str, (), [String; 2]> for Football {
             }
             eat!(i, "/liczba goli", MatchGoals(Part::FullTime));
             eat!(i, "/obie drużyny strzelą gola", MatchBothToScore);
+            return Ok((i, Winner(Part::FullTime)));
         }
         eat!(i, "Awans", ToAdvance);
         eat!(i, "Sposób awansu", AdvanceBy);

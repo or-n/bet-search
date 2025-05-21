@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use eat::*;
 use fantoccini::ClientBuilder;
-use fortuna::prematch::football;
+use fortuna::{event::football::translate_match, prematch::football};
 use odds::fortuna;
 use odds::shared;
 use odds::utils::{
@@ -10,7 +10,7 @@ use odds::utils::{
     page::{Name, Tag, Url},
     save::save,
 };
-use shared::book::Subpages;
+use shared::{book::Subpages, event::football::Football};
 use std::env;
 use std::sync::Arc;
 use std::time::Instant;
@@ -36,8 +36,6 @@ async fn main() {
     .await
     .expect("DB auth");
     db.use_ns("bet").use_db("bet").await.expect("DB namespace");
-    // let result = db.query("INFO FOR DB").await.expect("DB INFO");
-    // println!("{:#?}", result);
     let mut client = ClientBuilder::native()
         .connect(&browser::localhost(4444))
         .await
@@ -84,6 +82,23 @@ async fn main() {
         let file = format!("maybe_safe/{}", url.name());
         let _ = save(contents.as_bytes(), file).await;
         maybe_safe_save_count += 1;
+        let Some(m) = translate_match(m, |x| Some(x)) else {
+            continue;
+        };
+        let x = m
+            .events
+            .iter()
+            .find(|x| matches!(x.id, Football::Winner(_)));
+        println!("{:?}", x);
+        let events = shared::event::match_events_to_db(&m);
+        for event in events {
+            let id = m.get_id();
+            let result = db
+                .query(format!("CREATE real_event:{id} SET event={event};"))
+                .await
+                .unwrap();
+            println!("{:#?}", result);
+        }
     }
     client.close().await.unwrap();
     let elapsed = start.elapsed().as_secs_f32();

@@ -1,3 +1,5 @@
+use crate::shared::db::ToDBRecord;
+
 #[derive(Debug, Clone)]
 pub enum Football {
     Winner(Part),
@@ -78,6 +80,19 @@ pub enum Football {
     Match(Part),
     ToAdvance,
     AdvanceBy,
+}
+
+impl ToDBRecord for Football {
+    fn to_db_record(&self) -> Option<String> {
+        use Football::*;
+        let x = match self {
+            Winner(Part::FullTime) => "winner".to_string(),
+            Winner(Part::FirstHalf) => "winner_h1".to_string(),
+            Winner(Part::SecondHalf) => "winner_h2".to_string(),
+            _ => return None,
+        };
+        Some(format!("football_event:{x}"))
+    }
 }
 
 #[derive(Debug, Clone)]
