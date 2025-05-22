@@ -73,23 +73,19 @@ async fn main() {
         let file = format!("downloads/{}", url.name());
         let _ = save(contents.as_bytes(), file).await;
         save_count += 1;
-        let Some(m) = fortuna::safe::match_filter(m) else {
-            continue;
-        };
-        let Some(contents) = shared::event::match_contents(&m) else {
-            continue;
-        };
-        let file = format!("maybe_safe/{}", url.name());
-        let _ = save(contents.as_bytes(), file).await;
-        maybe_safe_save_count += 1;
-        let Some(m) = translate_match(m, |x| Some(x)) else {
+        let Some(m) = translate_match(&m, |x| Some(x)) else {
             continue;
         };
         let x = m
             .events
             .iter()
             .find(|x| matches!(x.id, Football::Winner(_)));
-        println!("{:?}", x);
+        println!("winner event: {:?}", x);
+        if x.is_none() {
+            let ids = m.events.iter().map(|x| x.id.clone());
+            let ids: Vec<_> = ids.collect();
+            println!("{:?}", ids);
+        }
         let events = shared::event::match_events_to_db(&m);
         for event in events {
             let id = m.get_id();
@@ -99,6 +95,15 @@ async fn main() {
                 .unwrap();
             println!("{:#?}", result);
         }
+        let Some(m_safe) = fortuna::safe::match_filter(m) else {
+            continue;
+        };
+        let Some(contents) = shared::event::match_contents(&m_safe) else {
+            continue;
+        };
+        let file = format!("maybe_safe/{}", url.name());
+        let _ = save(contents.as_bytes(), file).await;
+        maybe_safe_save_count += 1;
     }
     client.close().await.unwrap();
     let elapsed = start.elapsed().as_secs_f32();

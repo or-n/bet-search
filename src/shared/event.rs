@@ -20,7 +20,7 @@ fn eat_pair(i: &str) -> Result<(&str, (String, String)), ()> {
     Ok((i, pair))
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Event<T1, T2> {
     pub id: T1,
     pub odds: Vec<(T2, f32)>,

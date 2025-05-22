@@ -29,12 +29,12 @@ pub fn translate_event(
 }
 
 pub fn translate_match(
-    m: Match<String, String>,
+    m: &Match<String, String>,
     filter_event: impl Fn(
         Event<Football, String>,
     ) -> Option<Event<Football, String>>,
 ) -> Option<Match<Football, String>> {
-    let events = m.events.into_iter();
+    let events = m.events.clone().into_iter();
     let events = events.filter_map(|event| {
         translate_event(event, m.players.clone(), m.url.clone())
     });
@@ -44,9 +44,9 @@ pub fn translate_match(
         return None;
     }
     Some(event::Match {
-        url: m.url,
+        url: m.url.clone(),
         date: m.date,
-        players: m.players,
+        players: m.players.clone(),
         events,
     })
 }
