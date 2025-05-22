@@ -125,9 +125,8 @@ impl Tag<Page, Html> {
                 Event { id: name, odds }
             })
             .collect();
-        let winner = self.result_event();
-        println!("main event: {:?}", winner);
-        winner.into_iter().chain(rest.into_iter()).collect()
+        let main_event = self.result_event();
+        main_event.into_iter().chain(rest.into_iter()).collect()
     }
 
     pub fn date(&self) -> String {

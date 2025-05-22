@@ -1,22 +1,18 @@
 use dotenv::dotenv;
 use eat::*;
 use fantoccini::ClientBuilder;
-use fortuna::{event::football::translate_match, prematch::football};
-use odds::fortuna;
-use odds::shared;
-use odds::utils::{
-    browser, date,
-    download::Download,
-    page::{Name, Tag, Url},
-    save::save,
+use odds::{
+    fortuna::{self, event::football::translate_match, prematch::football},
+    shared::{self, book::Subpages},
+    utils::{
+        browser, date,
+        download::Download,
+        page::{Name, Tag, Url},
+        save::save,
+    },
 };
-use shared::{book::Subpages, event::football::Football};
-use std::env;
-use std::sync::Arc;
-use std::time::Instant;
-use surrealdb::engine::remote::ws::Ws;
-use surrealdb::opt::auth::Root;
-use surrealdb::Surreal;
+use std::{env, sync::Arc, time::Instant};
+use surrealdb::{engine::remote::ws::Ws, opt::auth::Root, Surreal};
 use tokio::sync::Mutex;
 
 #[tokio::main]
@@ -76,24 +72,14 @@ async fn main() {
         let Some(m) = translate_match(&m, |x| Some(x)) else {
             continue;
         };
-        let x = m
-            .events
-            .iter()
-            .find(|x| matches!(x.id, Football::Winner(_)));
-        println!("winner event: {:?}", x);
-        if x.is_none() {
-            let ids = m.events.iter().map(|x| x.id.clone());
-            let ids: Vec<_> = ids.collect();
-            println!("{:?}", ids);
-        }
         let events = shared::event::match_events_to_db(&m);
         for event in events {
             let id = m.get_id();
-            let result = db
+            let _response = db
                 .query(format!("CREATE real_event:{id} SET event={event};"))
                 .await
                 .unwrap();
-            println!("{:#?}", result);
+            println!("saved {id}");
         }
         let Some(m_safe) = fortuna::safe::match_filter(m) else {
             continue;
