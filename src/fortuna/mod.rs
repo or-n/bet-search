@@ -4,7 +4,6 @@ pub mod prematch;
 pub mod safe;
 use crate::utils::page::Name;
 use eat::*;
-// pub mod team;
 
 pub const COOKIE_ACCEPT: &str = r#"button[id="cookie-consent-button-accept"]"#;
 

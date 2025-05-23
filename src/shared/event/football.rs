@@ -15,9 +15,9 @@ pub enum Football {
     BothGoalBothHalves,
     BothToScore(Part),
     BothToScoreGoals,
-    BothToScore2,
     BothToScoreSameHalf,
     BothToScoreOrGoalsOver,
+    BothToScoreAtLeast(u32),
     WinnerBothToScore(Part, Part),
     Handicap(Part),
     Corners(Part),
@@ -94,6 +94,8 @@ pub enum Football {
     Fouls,
     FoulsPlayer(Player),
     SuicideGoal,
+    Superoffer,
+    MatchGoalSum,
 }
 
 impl ToDBRecord for Football {

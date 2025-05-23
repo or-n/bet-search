@@ -76,7 +76,8 @@ impl Eat<&str, (), [String; 2]> for Football {
                 eat!(i, "/liczba goli", BothToScoreGoals);
                 return Ok((i, BothToScore(Part::FullTime)));
             }
-            eat!(i, "po 2 lub więcej goli", BothToScore2);
+            eat!(i, "po 2 lub więcej goli", BothToScoreAtLeast(2));
+            eat!(i, "po 3 lub więcej goli", BothToScoreAtLeast(3));
         }
         eat!(i, "Handicap", Handicap(Part::FullTime));
         eat!(i, "Multigole", MultiGoals(Part::FullTime));
@@ -170,12 +171,14 @@ impl Eat<&str, (), [String; 2]> for Football {
                 eat!(i, "więcej rzutów rożnych", MatchMoreCorners);
                 eat!(i, "Przedział rzutów rożnych", MatchCornerRange);
                 eat!(i, "Multiwynik", MatchMultiScore);
+                eat!(i, "suma goli", MatchGoalSum);
             }
             eat!(i, "/liczba goli", MatchGoals(Part::FullTime));
             eat!(i, "/obie drużyny strzelą gola", MatchBothToScore);
             return Ok((i, Winner(Part::FullTime)));
         }
         eat!(i, "Awans", ToAdvance);
+        eat!(i, "awans", ToAdvance);
         eat!(i, "Sposób awansu", AdvanceBy);
         eat!(i, "Dokładny wynik", ExactScore(Part::FullTime));
         eat!(i, "Zwycięzca finału", FinaleWinner);
@@ -189,6 +192,18 @@ impl Eat<&str, (), [String; 2]> for Football {
             return Ok((i, RedCard(Part::FullTime)));
         }
         eat!(i, "padnie gol samobójczy", SuicideGoal);
+        if let Ok(i) = "SUPEROFERTA+: mecz".drop(i) {
+            let i = "\n                                    : ".drop(i)?;
+            let i = players[0].as_str().drop(i)?;
+            let sep = |i| {
+                eat!(i, "- ");
+                eat!(i, " -");
+                Err(())
+            };
+            let i = sep(i)?;
+            let i = players[1].as_str().drop(i)?;
+            return Ok((i, Superoffer));
+        }
         Err(())
     }
 }
