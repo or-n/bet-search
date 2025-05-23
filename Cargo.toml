@@ -31,5 +31,9 @@ name = "bmbets"
 path = "src/bin/bmbets.rs"
 
 [[bin]]
+name = "surebet"
+path = "src/bin/surebet.rs"
+
+[[bin]]
 name = "serve"
 path = "src/bin/serve.rs"
