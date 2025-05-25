@@ -16,3 +16,14 @@ impl Download<Client, Page> for Tag<Page, String> {
         client.source().await.map(Tag::new)
     }
 }
+
+/*
+#valuebets-table
+.valuebet_record
+data-start-at
+data-value
+data-overvalue
+tr td.event span.minor = players
+tr td.coeff abbr:data-bs-original-title = event
+tr td.text-center a:href
+*/
