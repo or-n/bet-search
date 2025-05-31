@@ -1,6 +1,6 @@
 use crate::shared::event;
 use eat::*;
-use event::football::{Football, Part, Player};
+use event::football::{Football, Overtime, Part, Player};
 use event::{Event, Match};
 use Football::*;
 
@@ -84,9 +84,24 @@ impl Eat<&str, (), [String; 2]> for Football {
         if let Ok(i) = "Liczba ".drop(i) {
             eat!(i, "goli", Goals(Part::FullTime));
             eat!(i, "rzutów rożnych", Corners(Part::FullTime));
-            eat!(i, "spalonych", Offsides);
-            eat!(i, "strzałów w światło bramki", ShotsOnTarget);
-            eat!(i, "fauli", Fouls);
+            if let Ok(i) = "spalonych".drop(i) {
+                if let Ok(i) = eat_overtime(i) {
+                    return Ok((i, Offsides(Overtime::Include)));
+                }
+                return Ok((i, Offsides(Overtime::Exclude)));
+            }
+            if let Ok(i) = "strzałów w światło bramki".drop(i) {
+                if let Ok(i) = eat_overtime(i) {
+                    return Ok((i, ShotsOnTarget(Overtime::Include)));
+                }
+                return Ok((i, ShotsOnTarget(Overtime::Exclude)));
+            }
+            if let Ok(i) = "fauli".drop(i) {
+                if let Ok(i) = eat_overtime(i) {
+                    return Ok((i, Fouls(Overtime::Include)));
+                }
+                return Ok((i, Fouls(Overtime::Exclude)));
+            }
             if let Ok(i) = eat_yellow(i) {
                 return Ok((i, YellowCards(Part::FullTime)));
             }
@@ -106,6 +121,7 @@ impl Eat<&str, (), [String; 2]> for Football {
             }
         }
         eat!(i, "Otrzyma kartkę", WillGetCard);
+        eat!(i, "Otrzyma czerwoną kartkę", WillGetRedCard);
         if let Ok(i) = "Dwójtyp".drop(i) {
             eat!(i, "/liczba goli", DoubleChanceGoalRange);
             eat!(i, "/obie drużyny strzelą gola", DoubleChanceBothToScore);
@@ -120,17 +136,63 @@ impl Eat<&str, (), [String; 2]> for Football {
         eat!(i, "Nie padnie gol-minuta", NoGoalBeforeMinute);
         eat!(i, "Różnica zwycięstwa", WinDiff);
         eat!(i, "1.rzut rożny w spotkaniu", FirstCorner(Part::FullTime));
-        if let Ok(i) = "Zawodnicy - strzały".drop(i) {
-            eat!(i, " celne", PlayerShotOnTarget);
-            return Ok((i, PlayerShot));
+        if let Ok(i) = "Zawodnicy - ".drop(i) {
+            if let Ok(i) = "strzały".drop(i) {
+                eat!(i, " celne", PlayerShotOnTarget);
+                return Ok((i, PlayerShot));
+            }
+            eat!(i, "asysty", PlayerAssists);
         }
         if let Ok(i) = eat_more(i) {
             let i = ' '.drop(i)?;
             eat!(i, "rzutów rożnych", MoreCorners(Part::FullTime));
-            eat!(i, "strzałów w światło bramki", MoreShotsOnTarget);
-            eat!(i, "fauli", MoreFouls);
+            if let Ok(i) = "strzałów w światło bramki".drop(i) {
+                if let Ok(i) = " - handicap".drop(i) {
+                    if let Ok(i) = eat_overtime(i) {
+                        return Ok((
+                            i,
+                            MoreShotsOnTargetHandicap(Overtime::Include),
+                        ));
+                    }
+                    return Ok((
+                        i,
+                        MoreShotsOnTargetHandicap(Overtime::Exclude),
+                    ));
+                }
+                if let Ok(i) = eat_overtime(i) {
+                    return Ok((i, MoreShotsOnTarget(Overtime::Include)));
+                }
+                return Ok((i, MoreShotsOnTarget(Overtime::Exclude)));
+            }
+            if let Ok(i) = "fauli".drop(i) {
+                if let Ok(i) = " - handicap".drop(i) {
+                    if let Ok(i) = eat_overtime(i) {
+                        return Ok((i, MoreFoulsHandicap(Overtime::Include)));
+                    }
+                    return Ok((i, MoreFoulsHandicap(Overtime::Exclude)));
+                }
+                if let Ok(i) = eat_overtime(i) {
+                    return Ok((i, MoreFouls(Overtime::Include)));
+                }
+                return Ok((i, MoreFouls(Overtime::Exclude)));
+            }
             if let Ok(i) = eat_yellow(i) {
                 return Ok((i, MoreYellowCards));
+            }
+            if let Ok(i) = "spalonych".drop(i) {
+                if let Ok(i) = " - handicap".drop(i) {
+                    if let Ok(i) = eat_overtime(i) {
+                        return Ok((
+                            i,
+                            MoreOffsidesHandicap(Overtime::Include),
+                        ));
+                    }
+                    return Ok((i, MoreOffsidesHandicap(Overtime::Exclude)));
+                }
+                if let Ok(i) = eat_overtime(i) {
+                    return Ok((i, MoreOffsides(Overtime::Include)));
+                }
+                return Ok((i, MoreOffsides(Overtime::Exclude)));
             }
         }
         eat!(i, "1-15 minuta spotkania", Minute15);
@@ -156,8 +218,18 @@ impl Eat<&str, (), [String; 2]> for Football {
             return Ok((i, Winner(Part::FullTime)));
         }
         eat!(i, "Przedział goli", GoalRange);
-        eat!(i, "Zawodnik rezerwowy strzeli gola (nie wystąpi od początku spotkania)",
-            SubstituteWillScore);
+        if let Ok(i) = "Zawodnik rezerwowy strzeli gola ".drop(i) {
+            eat!(
+                i,
+                "(razem z dogrywką. nie wystąpi od początku spotkania)",
+                SubstituteWillScore(Overtime::Include)
+            );
+            eat!(
+                i,
+                "(nie wystąpi od początku spotkania)",
+                SubstituteWillScore(Overtime::Exclude)
+            );
+        }
         eat!(i, "Będzie przegrywać, ale..", WillBeLosingBut);
         if let Ok(i) = "Mecz".drop(i) {
             eat!(i, " + strzelcy goli", MatchScorePlayers);
@@ -185,6 +257,11 @@ impl Eat<&str, (), [String; 2]> for Football {
         eat!(i, "Gol w obu połowach", GoalBothHalves);
         eat!(
             i,
+            "Gol w minucie meczu (85:00 lub później)",
+            GoalAfterMinute85
+        );
+        eat!(
+            i,
             "1i2 drużyna strzeli gola w obu połowach",
             BothGoalBothHalves
         );
@@ -204,6 +281,13 @@ impl Eat<&str, (), [String; 2]> for Football {
             let i = players[1].as_str().drop(i)?;
             return Ok((i, Superoffer));
         }
+        eat!(
+            i,
+            "Drużyna wygra lub będzie prowadziła różnicą dwóch goli w meczu",
+            WinnerOr2GoalAdvantage
+        );
+        eat!(i, "Zostanie zdobyty hattrick", Hattrick);
+        eat!(i, "Faule zawodnika", FoulsParticipant);
         Err(())
     }
 }
@@ -236,6 +320,10 @@ fn eat_player(i: &str, [p1, p2]: [String; 2]) -> Result<(&str, Player), ()> {
     eat!(i, "druzyna", p);
     eat!(i, "drużyna", p);
     Err(())
+}
+
+fn eat_overtime(i: &str) -> Result<&str, ()> {
+    " (razem z dogrywką)".drop(i)
 }
 
 fn eat_event_part(
@@ -284,7 +372,11 @@ fn eat_event_part(
         eat!(i, "1.rzut rożny", FirstCorner(part));
         eat!(i, "handicap", Handicap(part));
         if let Ok((i, p)) = eat_player(i, players) {
-            eat!(i, " przedział rzutów rożnych", CornerRangePlayer(p, part));
+            let i = ' '.drop(i)?;
+            eat!(i, "przedział rzutów rożnych", CornerRangePlayer(p, part));
+            if let Ok(i) = eat_red(i) {
+                return Ok((i, RedCardPlayer(p, part)));
+            }
         }
         if let Ok(i) = eat_red(i) {
             return Ok((i, RedCard(part)));
@@ -347,14 +439,32 @@ fn eat_event_player(i: &str, p: Player) -> Result<(&str, Football), ()> {
         eat!(i, "przynajmniej jedna połowę", WinAtLeastOneHalf(p));
     }
     eat!(i, "Multigole", MultiGoalsPlayer(p));
-    eat!(i, "strzeli gola w obu połowach", ScoreBothHalves(p));
+    if let Ok(i) = "strzeli ".drop(i) {
+        eat!(i, "gola w obu połowach", ScoreBothHalves(p));
+        eat!(i, "bramkę samobójczą", SuicideGoalPlayer(p));
+    }
     eat!(i, "dokładna liczba goli", ExactGoalsPlayer(p));
     if let Ok(i) = "liczba ".drop(i) {
         eat!(i, "goli", GoalsPlayer(p, Part::FullTime));
         eat!(i, "rzutów rożnych", CornersPlayer(p, Part::FullTime));
-        eat!(i, "strzałów w światło bramki", ShotsOnTargetPlayer(p));
-        eat!(i, "spalonych", OffsidesPlayer(p));
-        eat!(i, "fauli", FoulsPlayer(p));
+        if let Ok(i) = "strzałów w światło bramki".drop(i) {
+            if let Ok(i) = eat_overtime(i) {
+                return Ok((i, ShotsOnTargetPlayer(p, Overtime::Include)));
+            }
+            return Ok((i, ShotsOnTargetPlayer(p, Overtime::Exclude)));
+        }
+        if let Ok(i) = "spalonych".drop(i) {
+            if let Ok(i) = eat_overtime(i) {
+                return Ok((i, OffsidesPlayer(p, Overtime::Include)));
+            }
+            return Ok((i, OffsidesPlayer(p, Overtime::Exclude)));
+        }
+        if let Ok(i) = "fauli".drop(i) {
+            if let Ok(i) = eat_overtime(i) {
+                return Ok((i, FoulsPlayer(p, Overtime::Include)));
+            }
+            return Ok((i, FoulsPlayer(p, Overtime::Exclude)));
+        }
         if let Ok(i) = eat_yellow(i) {
             return Ok((i, YellowCardsPlayer(p, Part::FullTime)));
         }
@@ -371,7 +481,7 @@ fn eat_event_player(i: &str, p: Player) -> Result<(&str, Football), ()> {
         }
     }
     if let Ok(i) = eat_red(i) {
-        return Ok((i, RedCardPlayer(p)));
+        return Ok((i, RedCardPlayer(p, Part::FullTime)));
     }
     Err(())
 }

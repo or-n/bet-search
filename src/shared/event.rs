@@ -1,6 +1,6 @@
 pub mod football;
 
-use crate::shared::db::ToDBRecord;
+use crate::shared::db::{sanitize, ToDBRecord};
 use crate::utils::{date, scrape::split2};
 use eat::*;
 use std::fmt::{Debug, Display};
@@ -40,35 +40,6 @@ impl<T1, T2> Match<T1, T2> {
         let p2 = sanitize(self.players[1].as_str());
         format!("{p1}_vs_{p2}")
     }
-}
-
-fn sanitize(x: &str) -> String {
-    x.chars()
-        .map(|c| match c {
-            'ą' => 'a',
-            'ć' => 'c',
-            'ę' => 'e',
-            'ł' => 'l',
-            'ń' => 'n',
-            'ó' => 'o',
-            'ś' => 's',
-            'ź' => 'z',
-            'ż' => 'z',
-            'Ą' => 'A',
-            'Ć' => 'C',
-            'Ę' => 'E',
-            'Ł' => 'L',
-            'Ń' => 'N',
-            'Ó' => 'O',
-            'Ś' => 'S',
-            'Ź' => 'Z',
-            'Ż' => 'Z',
-            ' ' => '_',
-            'á' => 'a',
-            _ => c,
-        })
-        .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
-        .collect()
 }
 
 pub fn eat_match(i: &str) -> Result<Match<String, String>, ()> {
