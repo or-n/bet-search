@@ -26,8 +26,58 @@ pub fn sanitize(x: &str) -> String {
             ' ' => '_',
             '-' => '_',
             'á' => 'a',
+            'ř' => 'r',
             _ => c,
         })
         .filter(|c| c.is_alphanumeric() || *c == '_')
         .collect()
+}
+
+pub enum Football {
+    Win,
+    WinDiff,
+    WinEitherH1H2,
+    NotWin,
+    NotWinEitherH1FT,
+    Goals,
+    Not0GoalsP1P2,
+    Not0GoalsP1P2AndGoals,
+    Not0GoalsP1P2EitherH1H2,
+    Not0GoalsH1H2,
+    Targets,
+    YellowCards,
+    RedCards,
+    Corners,
+    Offsides,
+    Fouls,
+    Penalty,
+}
+
+pub enum Player {
+    P1,
+    P2,
+}
+
+pub struct Event {
+    pub tag: Football,
+    pub player: Option<Player>,
+    pub time_min: Option<f64>,
+    pub time_max: Option<f64>,
+    pub min: Option<f64>,
+    pub max: Option<f64>,
+    pub handicap: Option<f64>,
+}
+
+pub fn translate(_: super::event::football::Football) -> Event {
+    use Football::*;
+    use Player::*;
+    Event {
+        tag: Win,
+        player: Some(P1),
+        time_min: None,
+        time_max: None,
+        min: None,
+        max: None,
+        handicap: None,
+    }
 }
