@@ -69,6 +69,15 @@ pub fn translate_match(
 impl Eat<&str, (), [String; 2]> for FootballOption {
     fn eat(i: &str, players: [String; 2]) -> Result<(&str, Self), ()> {
         use FootballOption::*;
+        if let Ok(i) = "02".drop(i) {
+            return Ok((i, NotWin(1)));
+        }
+        if let Ok(i) = "10".drop(i) {
+            return Ok((i, NotWin(2)));
+        }
+        if let Ok(i) = "12".drop(i) {
+            return Ok((i, NotWin(0)));
+        }
         if let Ok((i, r1)) = u32::eat(i, ()) {
             if let Ok(i) = '/'.drop(i) {
                 if r1 > 2 {
@@ -80,8 +89,12 @@ impl Eat<&str, (), [String; 2]> for FootballOption {
                     }
                     return Ok((i, Win2(r1, r2)));
                 }
-                eat!(i, "Tak", WinBool(r1, true));
-                eat!(i, "Nie", WinBool(r1, true));
+                if let Ok((i, b)) = eat_bool(i) {
+                    return Ok((i, WinBool(r1, b)));
+                }
+                if let Ok((i, line)) = eat_line(i) {
+                    return Ok((i, WinLine(r1, line)));
+                }
             }
             if let Ok(i) = ':'.drop(i) {
                 if let Ok((i, r2)) = u32::eat(i, ()) {
@@ -93,33 +106,112 @@ impl Eat<&str, (), [String; 2]> for FootballOption {
                     return Ok((i, Range(r1, r2)));
                 }
             }
+            if r1 <= 2 {
+                return Ok((i, Win(r1)));
+            }
         }
         if let Ok((i, p)) = eat_player(i, players.clone()) {
+            if let Ok(i) = ' '.drop(i) {
+                if let Ok((i, line)) = eat_line(i) {
+                    return Ok((i, PlayerLine(p, line)));
+                }
+            }
+            if let Ok(i) = '/'.drop(i) {
+                if let Ok((i, b)) = eat_bool(i) {
+                    return Ok((i, PlayerBool(p, b)));
+                }
+                if let Ok((i, line)) = eat_line(i) {
+                    return Ok((i, PlayerLine(p, line)));
+                }
+            }
+            if let Ok(i) = " - ".drop(i) {
+                if let Ok((i, p2)) = eat_player(i, players.clone()) {
+                    return Ok((i, PlayerPlayer(p, p2)));
+                }
+            }
             return Ok((i, Player(p)));
         }
+        if let Ok((i, line)) = eat_line(i) {
+            return Ok((i, Line(line)));
+        }
+        if let Ok((i, b1)) = eat_bool(i) {
+            if let Ok(i) = '/'.drop(i) {
+                if let Ok((i, b2)) = eat_bool(i) {
+                    return Ok((i, BoolBool(b1, b2)));
+                }
+                if let Ok((i, line)) = eat_line(i) {
+                    return Ok((i, BoolLine(b1, line)));
+                }
+            }
+            return Ok((i, Bool(b1)));
+        }
         eat!(i, "Nikt", NoPlayer);
-        if let Ok(i) = "Wiecej ".drop(i) {
-            if let Ok((i, x)) = f64::eat(i, ()) {
-                let line = football::Line(Ordering::Greater, x);
-                return Ok((i, Line(line)));
-            }
-            if let Ok((i, x)) = u64::eat(i, ()) {
-                let line = football::Line(Ordering::Greater, x as f64);
-                return Ok((i, Line(line)));
-            }
-        }
-        if let Ok(i) = "Mniej ".drop(i) {
-            if let Ok((i, x)) = f64::eat(i, ()) {
-                let line = football::Line(Ordering::Less, x);
-                return Ok((i, Line(line)));
-            }
-            if let Ok((i, x)) = u64::eat(i, ()) {
-                let line = football::Line(Ordering::Less, x as f64);
-                return Ok((i, Line(line)));
-            }
-        }
+        eat!(i, "Remis", Draw);
+        eat!(i, "Równo", Eq);
+        eat!(i, "Pierwszy", First);
+        eat!(i, "Drugi", Second);
+        eat!(i, "inny", Other);
+        eat!(i, "Brak goli", Goals0);
         Err(())
     }
+}
+
+fn eat_line(i: &str) -> Result<(&str, football::Line), ()> {
+    let over = |i| {
+        eat!(i, "Wiecej ");
+        eat!(i, "wiecej ");
+        eat!(i, "+ ");
+        eat!(i, "+");
+        Err(())
+    };
+    if let Ok(i) = over(i) {
+        let (i, x) = eat_f64(i)?;
+        let line = football::Line(Ordering::Greater, x);
+        return Ok((i, line));
+    }
+    let under = |i| {
+        eat!(i, "Mniej ");
+        eat!(i, "mniej ");
+        eat!(i, "- ");
+        eat!(i, "-");
+        Err(())
+    };
+    if let Ok(i) = under(i) {
+        let (i, x) = eat_f64(i)?;
+        let line = football::Line(Ordering::Less, x);
+        return Ok((i, line));
+    }
+    if let Ok((i, x)) = eat_f64(i) {
+        if let Ok(i) = '+'.drop(i) {
+            let line = football::Line(Ordering::Greater, x);
+            return Ok((i, line));
+        }
+    }
+    if let Ok((i, x)) = eat_f64(i) {
+        if let Ok(i) = '-'.drop(i) {
+            let line = football::Line(Ordering::Less, x);
+            return Ok((i, line));
+        }
+    }
+    Err(())
+}
+
+fn eat_f64(i: &str) -> Result<(&str, f64), ()> {
+    if let Ok((i, x)) = f64::eat(i, ()) {
+        return Ok((i, x));
+    }
+    if let Ok((i, x)) = u64::eat(i, ()) {
+        return Ok((i, x as f64));
+    }
+    Err(())
+}
+
+fn eat_bool(i: &str) -> Result<(&str, bool), ()> {
+    eat!(i, "Tak", true);
+    eat!(i, "Nie", false);
+    eat!(i, "tak", true);
+    eat!(i, "nie", false);
+    Err(())
 }
 
 impl Eat<&str, (), [String; 2]> for Football {

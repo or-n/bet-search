@@ -112,13 +112,28 @@ pub enum Football {
 
 #[derive(Debug, Clone)]
 pub enum FootballOption {
+    Win(u32),
     Win2(u32, u32),
     WinBool(u32, bool),
+    WinLine(u32, Line),
+    NotWin(u32),
     Line(Line),
     Score(u32, u32),
     Range(u32, u32),
     Player(Player),
+    PlayerPlayer(Player, Player),
+    PlayerBool(Player, bool),
+    PlayerLine(Player, Line),
     NoPlayer,
+    Draw,
+    Eq,
+    First,
+    Second,
+    Other,
+    Bool(bool),
+    BoolBool(bool, bool),
+    BoolLine(bool, Line),
+    Goals0,
 }
 
 #[derive(Debug, Clone)]
