@@ -119,6 +119,8 @@ pub enum FootballOption {
     Win2(u32, u32),
     WinBool(u32, bool),
     WinLine(u32, Line),
+    WinOverParticipant(u32, f64, String),
+    WinParticipant(u32, String),
     NotWin(u32),
     L(Line),
     Score(u32, u32),
@@ -137,6 +139,10 @@ pub enum FootballOption {
     BoolBool(bool, bool),
     BoolLine(bool, Line),
     Goals0,
+    Both,
+    BothParticipant(String),
+    Neither,
+    Only(Player),
 }
 
 #[derive(Debug, Clone)]
@@ -241,6 +247,13 @@ pub fn translate_match(
     })
 }
 
+fn player_nr(player: Player) -> u32 {
+    match player {
+        Player::P1 => 1,
+        Player::P2 => 2,
+    }
+}
+
 impl Eat<&str, (), [String; 2]> for FootballOption {
     fn eat(i: &str, players: [String; 2]) -> Result<(&str, Self), ()> {
         use FootballOption::*;
@@ -304,6 +317,31 @@ impl Eat<&str, (), [String; 2]> for FootballOption {
                     return Ok((i, PlayerPlayer(p, p2)));
                 }
             }
+            if let Ok(i) = " wygra, ".drop(i) {
+                if let Ok(i) = "Powyżej ".drop(i) {
+                    if let Ok((i, x)) = eat_till(i, " goli") {
+                        let (_, n) = f64::eat(x, ())?;
+                        if let Ok(i) = ", ".drop(i) {
+                            if let Ok((i, x)) = eat_till(i, " strzeli gola") {
+                                return Ok((
+                                    i,
+                                    WinOverParticipant(
+                                        player_nr(p),
+                                        n,
+                                        x.to_string(),
+                                    ),
+                                ));
+                            }
+                        }
+                    }
+                }
+                if let Ok((i, x)) = eat_till(i, " strzeli gola") {
+                    return Ok((
+                        i,
+                        WinParticipant(player_nr(p), x.to_string()),
+                    ));
+                }
+            }
             return Ok((i, Player(p)));
         }
         if let Ok((i, line)) = eat_line(i) {
@@ -320,15 +358,48 @@ impl Eat<&str, (), [String; 2]> for FootballOption {
             }
             return Ok((i, Bool(b1)));
         }
+        if let Ok(i) = "Tylko ".drop(i) {
+            if let Ok((i, p)) = eat_player(i, players.clone()) {
+                return Ok((i, Only(p)));
+            }
+        }
+        if let Ok(i) = "Remis".drop(i) {
+            if let Ok(i) = ", ".drop(i) {
+                if let Ok((i, x)) = eat_till(i, " strzeli gola") {
+                    return Ok((i, WinParticipant(0, x.to_string())));
+                }
+            }
+            return Ok((i, Draw));
+        }
+        if let Ok(i) = "Obie".drop(i) {
+            if let Ok(i) = " drużyny strzelą gola, ".drop(i) {
+                if let Ok((i, x)) = eat_till(i, " strzeli gola") {
+                    return Ok((i, BothParticipant(x.to_string())));
+                }
+            }
+            return Ok((i, Both));
+        }
         eat!(i, "Nikt", NoPlayer);
-        eat!(i, "Remis", Draw);
         eat!(i, "Równo", Eq);
         eat!(i, "Pierwszy", First);
         eat!(i, "Drugi", Second);
         eat!(i, "inny", Other);
         eat!(i, "Brak goli", Goals0);
+        eat!(i, "Żadna", Neither);
         Err(())
     }
+}
+
+fn eat_till<'a>(
+    i: &'a str,
+    pattern: &'a str,
+) -> Result<(&'a str, &'a str), ()> {
+    if let Some(index) = i.find(pattern) {
+        let x = &i[..index];
+        let i = &i[index + pattern.len()..];
+        return Ok((i, x));
+    }
+    Err(())
 }
 
 fn eat_line(i: &str) -> Result<(&str, Line), ()> {
