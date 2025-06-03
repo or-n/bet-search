@@ -1,5 +1,3 @@
-use crate::fortuna::event::football;
-
 pub trait ToDBRecord {
     fn to_db_record(&self) -> Option<String>;
 }
@@ -73,51 +71,4 @@ pub struct Params {
     pub min: Option<f64>,
     pub max: Option<f64>,
     pub handicap: Option<f64>,
-}
-
-fn time_min(part: football::Part) -> Option<f64> {
-    match part {
-        football::Part::SecondHalf => Some(45.),
-        _ => None,
-    }
-}
-
-fn time_max(part: football::Part) -> Option<f64> {
-    match part {
-        football::Part::FirstHalf => Some(45.),
-        _ => None,
-    }
-}
-
-pub fn translate(x: football::Football) -> Result<Event, ()> {
-    use Football::*;
-    use Player::*;
-    match x {
-        football::Football::Winner(part) => Ok(Event {
-            tag: Win,
-            params: Params {
-                player: Some(P1),
-                time_min: time_min(part),
-                time_max: time_max(part),
-                ..Params::default()
-            },
-        }),
-        football::Football::Goals(part) => Ok(Event {
-            tag: Goals,
-            params: Params {
-                time_min: time_min(part),
-                time_max: time_max(part),
-                ..Params::default()
-            },
-        }),
-        football::Football::Handicap(part) => Ok(Event {
-            tag: Win,
-            params: Params {
-                time_min: time_min(part),
-                time_max: time_max(part),
-                ..Params::default()
-            },
-        }),
-        _ => todo!(),
-    }
 }

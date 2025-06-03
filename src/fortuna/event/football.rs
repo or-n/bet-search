@@ -1,9 +1,8 @@
+use crate::shared::db::{self, ToDBRecord};
 use crate::shared::event::{Event, Match};
 use eat::*;
-use Football::*;
-
-use crate::shared::db::ToDBRecord;
 use std::cmp::Ordering;
+use Football::*;
 
 #[derive(Debug, Clone)]
 pub enum Football {
@@ -121,7 +120,7 @@ pub enum FootballOption {
     WinBool(u32, bool),
     WinLine(u32, Line),
     NotWin(u32),
-    Line(Line),
+    L(Line),
     Score(u32, u32),
     Range(u32, u32),
     Player(Player),
@@ -308,7 +307,7 @@ impl Eat<&str, (), [String; 2]> for FootballOption {
             return Ok((i, Player(p)));
         }
         if let Ok((i, line)) = eat_line(i) {
-            return Ok((i, Line(line)));
+            return Ok((i, L(line)));
         }
         if let Ok((i, b1)) = eat_bool(i) {
             if let Ok(i) = '/'.drop(i) {
@@ -849,4 +848,82 @@ fn eat_red(i: &str) -> Result<&str, ()> {
     };
     let i = red(i)?;
     " kartka (bez czerwonych kartek dla trenera i sztabu)".drop(i)
+}
+
+fn time_min(part: Part) -> Option<f64> {
+    match part {
+        Part::SecondHalf => Some(45.),
+        _ => None,
+    }
+}
+
+fn time_max(part: Part) -> Option<f64> {
+    match part {
+        Part::FirstHalf => Some(45.),
+        _ => None,
+    }
+}
+
+fn db_player(x: Player) -> db::Player {
+    match x {
+        Player::P1 => db::Player::P1,
+        Player::P2 => db::Player::P2,
+    }
+}
+
+pub fn translate(x: Football, o: FootballOption) -> Result<db::Event, ()> {
+    use Football::*;
+    use FootballOption::*;
+    match x {
+        Winner(part) => Ok(db::Event {
+            tag: db::Football::Win,
+            params: db::Params {
+                player: match o {
+                    Win(0) => None,
+                    Win(1) => Some(db::Player::P1),
+                    Win(2) => Some(db::Player::P2),
+                    _ => panic!(),
+                },
+                time_min: time_min(part),
+                time_max: time_max(part),
+                ..db::Params::default()
+            },
+        }),
+        Handicap(part) => match o {
+            PlayerLine(p, line) => Ok(db::Event {
+                tag: db::Football::Win,
+                params: db::Params {
+                    player: Some(db_player(p)),
+                    time_min: time_min(part),
+                    time_max: time_max(part),
+                    handicap: match line.0 {
+                        Ordering::Greater => Some(line.1),
+                        Ordering::Less => Some(-line.1),
+                        _ => panic!(),
+                    },
+                    ..db::Params::default()
+                },
+            }),
+            _ => panic!(),
+        },
+        Goals(part) => Ok(db::Event {
+            tag: db::Football::Goals,
+            params: db::Params {
+                time_min: time_min(part),
+                time_max: time_max(part),
+                min: match o {
+                    L(Line(Ordering::Greater, value)) => Some(value),
+                    L(Line(Ordering::Equal, value)) => Some(value),
+                    _ => panic!(),
+                },
+                max: match o {
+                    L(Line(Ordering::Less, value)) => Some(value),
+                    L(Line(Ordering::Equal, value)) => Some(value),
+                    _ => panic!(),
+                },
+                ..db::Params::default()
+            },
+        }),
+        _ => todo!(),
+    }
 }
