@@ -1,4 +1,4 @@
-use crate::shared::db::{sanitize, ToDBRecord};
+use crate::shared::db::{self, ToDBRecord};
 use crate::utils::{date, scrape::split2};
 use eat::*;
 use std::fmt::{Debug, Display};
@@ -33,9 +33,9 @@ pub struct Match<T1, T2> {
 }
 
 impl<T1, T2> Match<T1, T2> {
-    pub fn get_id(&self) -> String {
-        let p1 = sanitize(self.players[0].as_str());
-        let p2 = sanitize(self.players[1].as_str());
+    pub fn db_id(&self) -> String {
+        let p1 = db::sanitize(self.players[0].as_str());
+        let p2 = db::sanitize(self.players[1].as_str());
         format!("{p1}_vs_{p2}")
     }
 }
