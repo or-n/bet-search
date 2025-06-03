@@ -1,4 +1,4 @@
-pub mod football;
+// pub mod football;
 
 use crate::shared::db::{sanitize, ToDBRecord};
 use crate::utils::{date, scrape::split2};

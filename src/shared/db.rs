@@ -1,4 +1,4 @@
-use super::event::football;
+use crate::fortuna::event::football;
 
 pub trait ToDBRecord {
     fn to_db_record(&self) -> Option<String>;

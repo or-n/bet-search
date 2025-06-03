@@ -1,7 +1,7 @@
 use crate::bmbets::menu;
+use crate::fortuna::event::football::{Football, Part, Player};
 use crate::shared::event;
 use eat::*;
-use event::football::{Football, Part, Player};
 use event::Event;
 use fantoccini::{error::CmdError, Client};
 use futures::StreamExt;
