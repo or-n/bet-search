@@ -1,16 +1,17 @@
 use crate::shared::event;
 use eat::*;
-use event::football::{Football, Overtime, Part, Player};
+use event::football::{self, Football, FootballOption, Overtime, Part, Player};
 use event::{Event, Match};
+use std::cmp::Ordering;
 use Football::*;
 
 pub fn translate_event(
     event: Event<String, String>,
     players: [String; 2],
     url: String,
-) -> Option<Event<Football, String>> {
+) -> Option<Event<Football, FootballOption>> {
     let i = event.id.as_str();
-    let r = Football::eat(i, players);
+    let r = Football::eat(i, players.clone());
     if let Err(error) = r {
         println!("{} {:?}", i, error);
         println!("{}", url);
@@ -22,18 +23,32 @@ pub fn translate_event(
         println!("");
         return None;
     }
-    Some(Event {
-        id,
-        odds: event.odds,
-    })
+    let odds = event.odds.into_iter().filter_map(|(x, value)| {
+        let i = x.as_str();
+        let r = FootballOption::eat(i, players.clone());
+        if let Err(error) = r {
+            println!("{} {:?}", i, error);
+            println!("{}", url);
+        }
+        let (i, y) = r.ok()?;
+        if !i.is_empty() {
+            println!("{:?} {:?}", y, i);
+            println!("{}", x);
+            println!("");
+            return None;
+        }
+        Some((y, value))
+    });
+    let odds: Vec<_> = odds.collect();
+    Some(Event { id, odds: odds })
 }
 
 pub fn translate_match(
     m: &Match<String, String>,
     filter_event: impl Fn(
-        Event<Football, String>,
-    ) -> Option<Event<Football, String>>,
-) -> Option<Match<Football, String>> {
+        Event<Football, FootballOption>,
+    ) -> Option<Event<Football, FootballOption>>,
+) -> Option<Match<Football, FootballOption>> {
     let events = m.events.clone().into_iter();
     let events = events.filter_map(|event| {
         translate_event(event, m.players.clone(), m.url.clone())
@@ -49,6 +64,62 @@ pub fn translate_match(
         players: m.players.clone(),
         events,
     })
+}
+
+impl Eat<&str, (), [String; 2]> for FootballOption {
+    fn eat(i: &str, players: [String; 2]) -> Result<(&str, Self), ()> {
+        use FootballOption::*;
+        if let Ok((i, r1)) = u32::eat(i, ()) {
+            if let Ok(i) = '/'.drop(i) {
+                if r1 > 2 {
+                    return Err(());
+                }
+                if let Ok((i, r2)) = u32::eat(i, ()) {
+                    if r2 > 2 {
+                        return Err(());
+                    }
+                    return Ok((i, Win2(r1, r2)));
+                }
+                eat!(i, "Tak", WinBool(r1, true));
+                eat!(i, "Nie", WinBool(r1, true));
+            }
+            if let Ok(i) = ':'.drop(i) {
+                if let Ok((i, r2)) = u32::eat(i, ()) {
+                    return Ok((i, Score(r1, r2)));
+                }
+            }
+            if let Ok(i) = '-'.drop(i) {
+                if let Ok((i, r2)) = u32::eat(i, ()) {
+                    return Ok((i, Range(r1, r2)));
+                }
+            }
+        }
+        if let Ok((i, p)) = eat_player(i, players.clone()) {
+            return Ok((i, Player(p)));
+        }
+        eat!(i, "Nikt", NoPlayer);
+        if let Ok(i) = "Wiecej ".drop(i) {
+            if let Ok((i, x)) = f64::eat(i, ()) {
+                let line = football::Line(Ordering::Greater, x);
+                return Ok((i, Line(line)));
+            }
+            if let Ok((i, x)) = u64::eat(i, ()) {
+                let line = football::Line(Ordering::Greater, x as f64);
+                return Ok((i, Line(line)));
+            }
+        }
+        if let Ok(i) = "Mniej ".drop(i) {
+            if let Ok((i, x)) = f64::eat(i, ()) {
+                let line = football::Line(Ordering::Less, x);
+                return Ok((i, Line(line)));
+            }
+            if let Ok((i, x)) = u64::eat(i, ()) {
+                let line = football::Line(Ordering::Less, x as f64);
+                return Ok((i, Line(line)));
+            }
+        }
+        Err(())
+    }
 }
 
 impl Eat<&str, (), [String; 2]> for Football {

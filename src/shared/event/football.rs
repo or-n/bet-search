@@ -1,4 +1,5 @@
 use crate::shared::db::ToDBRecord;
+use std::cmp::Ordering;
 
 #[derive(Debug, Clone)]
 pub enum Football {
@@ -108,6 +109,20 @@ pub enum Football {
     FoulsParticipant,
     GoalAfterMinute85,
 }
+
+#[derive(Debug, Clone)]
+pub enum FootballOption {
+    Win2(u32, u32),
+    WinBool(u32, bool),
+    Line(Line),
+    Score(u32, u32),
+    Range(u32, u32),
+    Player(Player),
+    NoPlayer,
+}
+
+#[derive(Debug, Clone)]
+pub struct Line(pub Ordering, pub f64);
 
 impl ToDBRecord for Football {
     fn to_db_record(&self) -> Option<String> {

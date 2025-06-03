@@ -1,3 +1,5 @@
+use super::event::football;
+
 pub trait ToDBRecord {
     fn to_db_record(&self) -> Option<String>;
 }
@@ -60,6 +62,11 @@ pub enum Player {
 
 pub struct Event {
     pub tag: Football,
+    pub params: Params,
+}
+
+#[derive(Default)]
+pub struct Params {
     pub player: Option<Player>,
     pub time_min: Option<f64>,
     pub time_max: Option<f64>,
@@ -68,16 +75,49 @@ pub struct Event {
     pub handicap: Option<f64>,
 }
 
-pub fn translate(_: super::event::football::Football) -> Event {
+fn time_min(part: football::Part) -> Option<f64> {
+    match part {
+        football::Part::SecondHalf => Some(45.),
+        _ => None,
+    }
+}
+
+fn time_max(part: football::Part) -> Option<f64> {
+    match part {
+        football::Part::FirstHalf => Some(45.),
+        _ => None,
+    }
+}
+
+pub fn translate(x: football::Football) -> Result<Event, ()> {
     use Football::*;
     use Player::*;
-    Event {
-        tag: Win,
-        player: Some(P1),
-        time_min: None,
-        time_max: None,
-        min: None,
-        max: None,
-        handicap: None,
+    match x {
+        football::Football::Winner(part) => Ok(Event {
+            tag: Win,
+            params: Params {
+                player: Some(P1),
+                time_min: time_min(part),
+                time_max: time_max(part),
+                ..Params::default()
+            },
+        }),
+        football::Football::Goals(part) => Ok(Event {
+            tag: Goals,
+            params: Params {
+                time_min: time_min(part),
+                time_max: time_max(part),
+                ..Params::default()
+            },
+        }),
+        football::Football::Handicap(part) => Ok(Event {
+            tag: Win,
+            params: Params {
+                time_min: time_min(part),
+                time_max: time_max(part),
+                ..Params::default()
+            },
+        }),
+        _ => todo!(),
     }
 }
