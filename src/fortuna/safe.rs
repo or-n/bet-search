@@ -1,5 +1,5 @@
 use crate::shared::event;
-use event::{Event, Match};
+use event::{Event, MatchEvents};
 
 fn event_filter<T1, T2>(event: Event<T1, T2>) -> Option<Event<T1, T2>> {
     let odds = event.odds.into_iter();
@@ -11,11 +11,13 @@ fn event_filter<T1, T2>(event: Event<T1, T2>) -> Option<Event<T1, T2>> {
     Some(event::Event { odds, ..event })
 }
 
-pub fn match_filter<T1, T2>(m: Match<T1, T2>) -> Option<Match<T1, T2>> {
+pub fn match_events_filter<T1, T2>(
+    m: MatchEvents<T1, T2>,
+) -> Option<MatchEvents<T1, T2>> {
     let events = m.events.into_iter().filter_map(event_filter);
     let events: Vec<_> = events.collect();
     if events.is_empty() {
         return None;
     }
-    Some(event::Match::<T1, T2> { events, ..m })
+    Some(event::MatchEvents::<T1, T2> { events, ..m })
 }

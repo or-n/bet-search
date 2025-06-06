@@ -1,7 +1,7 @@
 use crate::fortuna::prematch::URL;
 use crate::shared::{
     book::Subpages,
-    event::{Event, Match},
+    event::{Event, MatchEvents},
 };
 use crate::utils::{
     date,
@@ -39,7 +39,7 @@ impl Subpages<(Page, NaiveDateTime)> for Tag<super::Page, Html> {
                     .select(&date)
                     .next()
                     .map(|a| clean_text(a.text()))?;
-                let d = date::eat(&datetime).unwrap();
+                let d = date::eat_assume_year(&datetime).unwrap();
                 Some((page, d))
             })
             .collect()
@@ -140,7 +140,7 @@ impl Tag<Page, Html> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Page(String);
+pub struct Page(pub String);
 
 impl Download<fantoccini::Client, Page> for Tag<Page, String> {
     type Error = fantoccini::error::CmdError;
@@ -166,10 +166,10 @@ impl Url for Page {
     }
 }
 
-pub fn to_match(
+pub fn to_match_events(
     url: String,
     document: Tag<Page, Html>,
-) -> Option<Match<String, String>> {
+) -> Option<MatchEvents<String, String>> {
     let Some(players) = document.players() else {
         return None;
     };
@@ -177,8 +177,8 @@ pub fn to_match(
     if events.is_empty() {
         return None;
     }
-    let date = date::eat(document.date().as_str())?;
-    Some(Match {
+    let date = date::eat_assume_year(document.date().as_str())?;
+    Some(MatchEvents {
         url,
         date,
         players,

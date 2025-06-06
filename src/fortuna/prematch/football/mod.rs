@@ -1,13 +1,17 @@
 pub mod subpage;
 
 use crate::fortuna::COOKIE_ACCEPT;
+use crate::shared::event::Match;
 use crate::utils::{
-    browser,
+    browser, date,
     download::Download,
     page::{Name, Tag},
+    scrape::clean_text,
 };
+use chrono::NaiveDateTime;
 use eat::*;
 use fantoccini::{error::CmdError, Client, Locator};
+use scraper::{Html, Selector};
 use tokio::time::{sleep, Duration};
 
 const URL: &str = "/zaklady-bukmacherskie/pilka-nozna";
@@ -66,6 +70,38 @@ impl Download<Client, Page> for Tag<Page, String> {
             sleep(Duration::from_secs(2)).await;
         }
         client.source().await.map(Tag::new)
+    }
+}
+
+impl Tag<Page, Html> {
+    pub fn matches(&self) -> Vec<Match> {
+        let event = Selector::parse("table.events-table tr").unwrap();
+        let title = Selector::parse("td.col-title").unwrap();
+        let subpage = Selector::parse("a.event-link").unwrap();
+        let date = Selector::parse("span.event-datetime").unwrap();
+        self.inner()
+            .select(&event)
+            .filter_map(|element| {
+                let title = element.select(&title).next()?;
+                let url = title
+                    .select(&subpage)
+                    .filter_map(|element| element.value().attr("href"))
+                    .next()
+                    .map(|href| href.to_string())?;
+                let players = title.value().attr("data-value").unwrap();
+                let (before, after) = players.split_once(" - ")?;
+                let before = before.trim().to_string();
+                let after = after.trim().to_string();
+                let players = [before, after];
+                let datetime = element
+                    .select(&date)
+                    .next()
+                    .map(|a| clean_text(a.text()))?;
+                let date = date::eat_assume_year(&datetime).unwrap();
+                let m = Match { players, date, url };
+                Some(m)
+            })
+            .collect()
     }
 }
 
