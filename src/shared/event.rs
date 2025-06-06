@@ -39,6 +39,15 @@ pub struct MatchEvents<T1, T2> {
     pub events: Vec<Event<T1, T2>>,
 }
 
+impl Match {
+    pub fn db_id(&self) -> String {
+        let p1 = db::sanitize(self.players[0].as_str());
+        let p2 = db::sanitize(self.players[1].as_str());
+        let date = self.date.format("%Y_%m%d_%H%M");
+        format!("{date}_{p1}_vs_{p2}")
+    }
+}
+
 impl<T1, T2> MatchEvents<T1, T2> {
     pub fn db_id(&self) -> String {
         let p1 = db::sanitize(self.players[0].as_str());

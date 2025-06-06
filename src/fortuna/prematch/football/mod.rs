@@ -8,7 +8,6 @@ use crate::utils::{
     page::{Name, Tag},
     scrape::clean_text,
 };
-use chrono::NaiveDateTime;
 use eat::*;
 use fantoccini::{error::CmdError, Client, Locator};
 use scraper::{Html, Selector};

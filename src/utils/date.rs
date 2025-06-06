@@ -1,4 +1,4 @@
-use chrono::{Datelike, Local, NaiveDateTime};
+use chrono::{DateTime, Datelike, Local, NaiveDateTime, TimeZone};
 
 pub fn eat_assume_year(i: &str) -> Option<NaiveDateTime> {
     let now = Local::now();
@@ -17,4 +17,8 @@ pub fn eat_assume_year(i: &str) -> Option<NaiveDateTime> {
 pub fn eat(i: &str) -> Option<NaiveDateTime> {
     let format = "%Y-%m-%d %H:%M";
     NaiveDateTime::parse_from_str(i, format).ok()
+}
+
+pub fn to_local(x: NaiveDateTime) -> DateTime<Local> {
+    Local.from_local_datetime(&x).single().unwrap()
 }

@@ -9,6 +9,7 @@ const URL: &str = "https://www.sts.pl/live";
 const COOKIE_ACCEPT: &str =
     r#"button[id="CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll"]"#;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Page(String);
 

@@ -1,4 +1,3 @@
-use crate::shared::event::{Event, Match};
 use eat::*;
 use std::fmt::Debug;
 

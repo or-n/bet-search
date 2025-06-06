@@ -1,3 +1,29 @@
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use std::env;
+use surrealdb::{
+    engine::remote::ws::{Client, Ws},
+    opt::auth::Root,
+    sql::Thing,
+    Datetime, RecordId, Surreal,
+};
+
+pub async fn connect() -> Surreal<Client> {
+    let url = env::var("DB_URL").expect("DB_URL");
+    let user = env::var("DB_USERNAME").expect("DB_USERNAME");
+    let pass = env::var("DB_PASSWORD").expect("DB_PASSWORD");
+    println!("{} {}", url, user);
+    let db = Surreal::new::<Ws>(&url).await.expect("DB connect");
+    println!("connected");
+    db.signin(Root {
+        username: &user,
+        password: &pass,
+    })
+    .await
+    .expect("DB auth");
+    db.use_ns("bet").use_db("bet").await.expect("DB namespace");
+    db
+}
+
 pub trait ToDBRecord {
     fn to_db_record(&self) -> Option<String>;
 }
@@ -71,4 +97,60 @@ pub struct Params {
     pub min: Option<f64>,
     pub max: Option<f64>,
     pub handicap: Option<f64>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Match {
+    pub date: Datetime,
+    pub player1: String,
+    pub player2: String,
+    pub sport: Sport,
+}
+
+#[derive(Debug)]
+pub enum Sport {
+    Football,
+    Basketball,
+    Tennis,
+    Volleyball,
+}
+
+impl Serialize for Sport {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let id_str = match self {
+            Sport::Football => "sport:football",
+            Sport::Basketball => "sport:basketball",
+            Sport::Tennis => "sport:tennis",
+            Sport::Volleyball => "sport:volleyball",
+        };
+        let thing: Thing = id_str.parse().unwrap();
+        thing.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Sport {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let thing = Thing::deserialize(deserializer)?;
+        match thing.to_string().as_str() {
+            "sport:football" => Ok(Sport::Football),
+            "sport:basketball" => Ok(Sport::Basketball),
+            "sport:tennis" => Ok(Sport::Tennis),
+            "sport:volleyball" => Ok(Sport::Volleyball),
+            other => {
+                Err(de::Error::custom(format!("Unknown sport id: {}", other)))
+            }
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Record {
+    #[allow(dead_code)]
+    id: RecordId,
 }

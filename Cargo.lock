@@ -2283,6 +2283,7 @@ dependencies = [
  "fantoccini",
  "futures",
  "scraper",
+ "serde",
  "serde_json",
  "surrealdb",
  "thiserror 2.0.12",
