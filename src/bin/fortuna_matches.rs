@@ -32,19 +32,27 @@ async fn main() {
                 sport: db::Sport::Football,
             })
             .await;
+        let relate = db
+            .query(format!("RELATE match:{id}->on->book:fortuna SET url=$url;"))
+            .bind(("url", m.url.clone()));
         match r {
             Ok(created) => {
                 println!("{id} {:?}", created);
+                let r = relate.await;
+                println!("{:?}", r);
             }
             Err(Error::Api(Api::Query(msg)))
                 if msg.ends_with("already exists") =>
             {
                 println!("{id} already exists");
+                let r = relate.await;
+                println!("{:?}", r);
             }
             Err(error) => {
                 println!("{:?}", error);
             }
         }
     }
+    client.close().await.unwrap();
     println!("Elapsed time: {:.2?}", start.elapsed());
 }
