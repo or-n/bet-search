@@ -1,5 +1,3 @@
-use chrono::*;
-use chrono::{Duration, Local};
 use dotenv::dotenv;
 use fantoccini::ClientBuilder;
 use odds::{
@@ -15,74 +13,71 @@ use odds::{
         page::{Tag, Url},
     },
 };
-use std::{env, sync::Arc, time::Instant};
-use surrealdb::{
-    engine::remote::ws::Ws, error::Api, opt::auth::Root, Error, Surreal,
-};
+use std::{sync::Arc, time::Instant};
+use surrealdb::{engine::remote::ws::Client, error::Api, Error, Surreal};
 use tokio::sync::Mutex;
+
+async fn get_matches(db: &Surreal<Client>) -> Result<Vec<db::MatchUrl>, Error> {
+    db.query(
+        "SELECT in, url FROM on
+        WHERE out = book:fortuna
+        AND in.date > time::now()
+        AND in.date < time::now() + 12h
+        FETCH in;
+    ",
+    )
+    .await?
+    .take(0)
+}
 
 #[tokio::main]
 async fn main() {
     let start = Instant::now();
     dotenv().ok();
     let db = db::connect().await;
+    let match_urls = match get_matches(&db).await {
+        Ok(match_urls) => match_urls,
+        Err(error) => {
+            println!("{:?}", error);
+            return;
+        }
+    };
+    println!("Elapsed time: {:.2?}", start.elapsed());
     let mut client = ClientBuilder::native()
         .connect(&browser::localhost(4444))
         .await
         .unwrap();
-    let page = fortuna::prematch::football::Page;
-    let html = Tag::download(&mut client, page).await.unwrap();
-    let matches = html.document().matches();
-    for m in &matches {
-        let id = m.db_id();
-        let r: Result<Option<db::Record>, surrealdb::Error> = db
-            .create(("match", id.clone()))
-            .content(db::Match {
-                date: date::to_local(m.date).with_timezone(&Utc).into(),
-                player1: m.players[0].clone(),
-                player2: m.players[1].clone(),
-                sport: db::Sport::Football,
-            })
-            .await;
-        match r {
-            Ok(created) => {
-                println!("{id} {:?}", created);
-            }
-            Err(Error::Api(Api::Query(msg)))
-                if msg.ends_with("already exists") =>
-            {
-                println!("{id} already exists");
-            }
-            Err(error) => {
-                println!("{:?}", error);
-            }
-        }
-    }
-    println!("Elapsed time: {:.2?}", start.elapsed());
-    /*
-    let total_count = matches.len();
-    let queue = Arc::new(Mutex::new(matches));
-    println!("Elapsed time: {:.2?}", start.elapsed());
+    let total_count = match_urls.len();
+    println!("Total count: {}", total_count);
+    let queue = Arc::new(Mutex::new(match_urls));
     let start = Instant::now();
     let mut download_count = 0;
     let mut save_count = 0;
-    while let Some(m) = queue.lock().await.pop() {
-        if m.date <= Local::now().naive_local() + Duration::hours(12) {
-            continue;
-        }
-        let subpage = fortuna::prematch::football::subpage::Page(m.url.clone());
+    while let Some(match_url) = queue.lock().await.pop() {
+        let m = match_url.m;
+        let url = match_url.url;
+        println!("{} - {}", m.player1, m.player2);
+        let subpage = fortuna::prematch::football::subpage::Page(url.clone());
         let html = Tag::download(&mut client, subpage.clone()).await.unwrap();
         download_count += 1;
-        let Some(m) =
+        let Some(_fortuna_m) =
             football::subpage::to_match_events(subpage.url(), html.document())
         else {
             continue;
         };
-        println!("{} - {}", m.players[0], m.players[1]);
-        let Some(m) = translate_match_events::<Football, FootballOption>(m)
-        else {
-            continue;
-        };
+        let r: Result<Option<db::Record>, Error> = db
+            .create("download")
+            .content(db::Download {
+                date: chrono::Utc::now().into(),
+                m: m.id,
+                source: db::Source::Fortuna,
+            })
+            .await;
+        println!("{:?}", r);
+        // let Some(m) = translate_match_events::<Football, FootballOption>(m)
+        // else {
+        //     continue;
+        // };
         // let events = shared::event::match_events_to_db(&m);
         // for event in events {
         //     let id = m.db_id();
@@ -100,5 +95,5 @@ async fn main() {
     println!("Total count: {}", total_count);
     println!("Download count: {}", download_count);
     println!("Save count: {}", save_count);
-    println!("{:.2?} / download", elapsed / download_count as f32);*/
+    println!("{:.2?} / download", elapsed / download_count as f32);
 }

@@ -99,12 +99,20 @@ pub struct Params {
     pub handicap: Option<f64>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Match {
+    pub id: RecordId,
     pub date: Datetime,
     pub player1: String,
     pub player2: String,
     pub sport: Sport,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MatchUrl {
+    #[serde(rename = "in")]
+    pub m: Match,
+    pub url: String,
 }
 
 #[derive(Debug)]
@@ -113,6 +121,25 @@ pub enum Sport {
     Basketball,
     Tennis,
     Volleyball,
+}
+
+#[derive(Debug)]
+pub enum Source {
+    Fortuna,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Download {
+    pub date: Datetime,
+    #[serde(rename = "match")]
+    pub m: RecordId,
+    pub source: Source,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Record {
+    #[allow(dead_code)]
+    id: RecordId,
 }
 
 impl Serialize for Sport {
@@ -149,8 +176,30 @@ impl<'de> Deserialize<'de> for Sport {
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct Record {
-    #[allow(dead_code)]
-    id: RecordId,
+impl Serialize for Source {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let id_str = match self {
+            Source::Fortuna => "source:fortuna",
+        };
+        let thing: Thing = id_str.parse().unwrap();
+        thing.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Source {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let thing = Thing::deserialize(deserializer)?;
+        match thing.to_string().as_str() {
+            "source:fortuna" => Ok(Source::Fortuna),
+            other => {
+                Err(de::Error::custom(format!("Unknown source id: {}", other)))
+            }
+        }
+    }
 }
