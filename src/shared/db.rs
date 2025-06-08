@@ -101,6 +101,14 @@ pub struct Params {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Match {
+    pub date: Datetime,
+    pub player1: String,
+    pub player2: String,
+    pub sport: Sport,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MatchWithId {
     pub id: RecordId,
     pub date: Datetime,
     pub player1: String,
@@ -111,7 +119,7 @@ pub struct Match {
 #[derive(Debug, Deserialize)]
 pub struct MatchUrl {
     #[serde(rename = "in")]
-    pub m: Match,
+    pub m: MatchWithId,
     pub url: String,
 }
 
