@@ -59,6 +59,7 @@ pub fn sanitize(x: &str) -> String {
         .collect()
 }
 
+#[derive(Debug)]
 pub enum Football {
     Win,
     WinDiff,
@@ -79,17 +80,19 @@ pub enum Football {
     Penalty,
 }
 
+#[derive(Debug)]
 pub enum Player {
     P1,
     P2,
 }
 
+#[derive(Debug)]
 pub struct Event {
     pub tag: Football,
     pub params: Params,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Params {
     pub player: Option<Player>,
     pub time_min: Option<f64>,

@@ -97,10 +97,9 @@ impl Tag<Page, Html> {
         let odds = Selector::parse("div.odds a").unwrap();
         let odds_name = Selector::parse("span.odds-name").unwrap();
         let odds_value = Selector::parse("span.odds-value").unwrap();
-        let rest: Vec<_> = self
-            .inner()
-            .select(&market)
-            .map(|element| {
+        let main_event = self.result_event().into_iter();
+        main_event
+            .chain(self.inner().select(&market).map(|element| {
                 let name = element
                     .select(&name)
                     .next()
@@ -123,10 +122,8 @@ impl Tag<Page, Html> {
                     })
                     .collect();
                 Event { id: name, odds }
-            })
-            .collect();
-        let main_event = self.result_event();
-        main_event.into_iter().chain(rest.into_iter()).collect()
+            }))
+            .collect()
     }
 
     pub fn date(&self) -> String {

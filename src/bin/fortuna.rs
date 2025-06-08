@@ -3,18 +3,13 @@ use fantoccini::ClientBuilder;
 use odds::{
     fortuna::{
         self,
-        event::football::{Football, FootballOption},
-        prematch::football,
+        event::football::{translate_db, Football, FootballOption},
     },
-    shared::{self, book::Subpages, db, event::translate_match_events},
-    utils::{
-        browser, date,
-        download::Download,
-        page::{Tag, Url},
-    },
+    shared::{db, event::translate_event2},
+    utils::{browser, download::Download, page::Tag},
 };
 use std::{sync::Arc, time::Instant};
-use surrealdb::{engine::remote::ws::Client, error::Api, Error, Surreal};
+use surrealdb::{engine::remote::ws::Client, Error, Surreal};
 use tokio::sync::Mutex;
 
 async fn get_matches(db: &Surreal<Client>) -> Result<Vec<db::MatchUrl>, Error> {
@@ -60,11 +55,6 @@ async fn main() {
         let subpage = fortuna::prematch::football::subpage::Page(url.clone());
         let html = Tag::download(&mut client, subpage.clone()).await.unwrap();
         download_count += 1;
-        let Some(_fortuna_m) =
-            football::subpage::to_match_events(subpage.url(), html.document())
-        else {
-            continue;
-        };
         let r: Result<Option<db::Record>, Error> = db
             .create("download")
             .content(db::Download {
@@ -73,11 +63,27 @@ async fn main() {
                 source: db::Source::Fortuna,
             })
             .await;
-        println!("{:?}", r);
-        // let Some(m) = translate_match_events::<Football, FootballOption>(m)
-        // else {
-        //     continue;
-        // };
+        if let Err(error) = r {
+            println!("{:?}", error);
+            continue;
+        }
+        let players = [m.player1, m.player2];
+        let events = html.document().events();
+        for event in events {
+            let r = translate_event2::<Football, FootballOption>(
+                event.clone(),
+                players.clone(),
+            );
+            if let Some(football_event) = r {
+                println!("{:?}", football_event);
+                for (option, _odd) in football_event.odds {
+                    let r = translate_db(football_event.id, option);
+                    if let Ok(db_event) = r {
+                        println!("{:?}", db_event);
+                    }
+                }
+            }
+        }
         // let events = shared::event::match_events_to_db(&m);
         // for event in events {
         //     let id = m.db_id();
