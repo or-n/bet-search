@@ -1,0 +1,48 @@
+[package]
+name = "odds"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+fantoccini = "0.21.4"
+futures = "0.3.31"
+scraper = "0.19.0"
+serde_json = "1.0.137"
+thiserror = "2.0.11"
+tokio = { version = "1.37.0", features = ["full"] }
+eat = { git = "https://github.com/or-n/rust-minimalist-utils.git" }
+chrono = "0.4.40"
+tokio-tungstenite = "0.26.2"
+surrealdb = "2.2.2"
+dotenv = "0.15.0"
+serde = { version = "1.0.219", features = ["derive"] }
+
+[[bin]]
+name = "fortuna"
+path = "src/bin/fortuna.rs"
+
+[[bin]]
+name = "fortuna_matches"
+path = "src/bin/fortuna_matches.rs"
+
+[[bin]]
+name = "fortuna_text"
+path = "src/bin/fortuna_text.rs"
+
+[[bin]]
+name = "sts"
+path = "src/bin/sts.rs"
+
+[[bin]]
+name = "bmbets"
+path = "src/bin/bmbets.rs"
+
+[[bin]]
+name = "surebet"
+path = "src/bin/surebet.rs"
+
+[[bin]]
+name = "serve"
+path = "src/bin/serve.rs"
