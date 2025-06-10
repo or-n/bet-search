@@ -1,10 +1,11 @@
+use chrono::{DateTime, Utc};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::env;
 use surrealdb::{
     engine::remote::ws::{Client, Ws},
     opt::auth::Root,
-    sql::Thing,
-    Datetime, RecordId, Surreal,
+    sql::{Datetime, Thing},
+    Error, RecordId, Surreal,
 };
 
 pub async fn connect() -> Surreal<Client> {
@@ -24,8 +25,44 @@ pub async fn connect() -> Surreal<Client> {
     db
 }
 
-pub trait ToDBRecord {
-    fn to_db_record(&self) -> Option<String>;
+pub async fn immediate_matches(
+    db: &Surreal<Client>,
+    now: DateTime<Utc>,
+    later: DateTime<Utc>,
+    source: Source,
+) -> Result<Vec<InRecord>, Error> {
+    let now: Datetime = now.into();
+    let later: Datetime = later.into();
+    db.query(
+        "SELECT in FROM on
+        WHERE out = $source
+        AND in.date > $now
+        AND in.date < $later;
+    ",
+    )
+    .bind(("source", source))
+    .bind(("now", now))
+    .bind(("later", later))
+    .await?
+    .take(0)
+}
+
+pub async fn fetch_match_urls(
+    db: &Surreal<Client>,
+    ids: Vec<RecordId>,
+    source: Source,
+) -> Result<Vec<MatchUrl>, Error> {
+    db.query(
+        "SELECT in, url FROM on
+        WHERE out = $source
+        AND in IN $ids
+        FETCH in;
+    ",
+    )
+    .bind(("source", source))
+    .bind(("ids", ids))
+    .await?
+    .take(0)
 }
 
 pub fn sanitize(x: &str) -> String {
@@ -126,6 +163,17 @@ pub struct MatchUrl {
     pub url: String,
 }
 
+impl MatchWithId {
+    pub fn without_id(self) -> Match {
+        Match {
+            date: self.date,
+            player1: self.player1,
+            player2: self.player2,
+            sport: self.sport,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum Sport {
     Football,
@@ -137,6 +185,7 @@ pub enum Sport {
 #[derive(Debug)]
 pub enum Source {
     Fortuna,
+    Bmbets,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -150,7 +199,13 @@ pub struct Download {
 #[derive(Debug, Deserialize)]
 pub struct Record {
     #[allow(dead_code)]
-    id: RecordId,
+    pub id: RecordId,
+}
+
+#[derive(Debug, Deserialize, Hash, PartialEq, Eq)]
+pub struct InRecord {
+    #[serde(rename = "in")]
+    pub id: RecordId,
 }
 
 impl Serialize for Sport {
@@ -194,6 +249,7 @@ impl Serialize for Source {
     {
         let id_str = match self {
             Source::Fortuna => "source:fortuna",
+            Source::Bmbets => "source:bmbets",
         };
         let thing: Thing = id_str.parse().unwrap();
         thing.serialize(serializer)
@@ -208,6 +264,7 @@ impl<'de> Deserialize<'de> for Source {
         let thing = Thing::deserialize(deserializer)?;
         match thing.to_string().as_str() {
             "source:fortuna" => Ok(Source::Fortuna),
+            "source:bmbets" => Ok(Source::Bmbets),
             other => {
                 Err(de::Error::custom(format!("Unknown source id: {}", other)))
             }

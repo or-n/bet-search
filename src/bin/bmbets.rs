@@ -1,21 +1,17 @@
-use eat::*;
-use event::{football::Football, Event, Match};
+use dotenv::dotenv;
 use fantoccini::{Client, ClientBuilder};
-use futures::stream::StreamExt;
-use io::Write;
 use odds::{
-    bmbets::{
-        football::goto,
-        search::{find_match, hits, Hit},
-        URL,
-    },
-    fortuna,
-    shared::event,
-    utils::{browser, page::Name, read, save::save},
+    bmbets::search::{find_match, hits, Hit},
+    shared::db,
+    utils::browser,
 };
 use scraper::Html;
 use serde_json::{json, Map};
-use std::io;
+use std::{
+    collections::HashSet,
+    io::{self, Write},
+    time::Instant,
+};
 
 fn get_id() -> Option<Option<usize>> {
     print!("choose: ");
@@ -29,13 +25,11 @@ fn get_id() -> Option<Option<usize>> {
     trim.parse().ok().map(Some)
 }
 
-async fn get_hit(
-    client: &mut Client,
-    m: &Match<Football, String>,
-) -> Option<Hit> {
+async fn get_hit(client: &mut Client, m: &db::Match) -> Option<Hit> {
     loop {
-        println!("{}", m.date.format("%Y-%m-%d %H:%M"));
-        println!("{} - {}", m.players[0], m.players[1]);
+        let local = m.date.0.with_timezone(&chrono::Local);
+        println!("{}", local.format("%Y-%m-%d %H:%M"));
+        println!("{} - {}", m.player1, m.player2);
         print!("search: ");
         io::stdout().flush().unwrap();
         let mut input = String::new();
@@ -80,62 +74,49 @@ async fn get_match(client: &mut Client, prompt: &str) -> Option<Option<Hit>> {
     Some(Some(hits[id].clone()))
 }
 
-async fn match_filter(
-    m: Match<Football, String>,
-    hit: &Hit,
-    client: &mut Client,
-) -> Match<Football, String> {
-    client.goto(&hit.relative_url).await.unwrap();
-    let events = futures::stream::iter(m.events.iter()).filter_map(|e| {
-        let mut client = client.clone();
-        async move {
-            match goto(&mut client, e).await {
-                Ok(e) => {
-                    if e.odds.is_empty() {
-                        return None;
-                    }
-                    Some(e)
-                }
-                Err(error) => {
-                    println!("{:?}", e);
-                    println!("{:?}", error);
-                    None
-                }
-            }
-        }
-    });
-    let events: Vec<_> = events.collect().await;
-    Match {
-        url: m.url,
-        date: m.date,
-        players: m.players,
-        events,
-    }
-}
-
-fn filter_event(
-    event: Event<Football, String>,
-) -> Option<Event<Football, String>> {
-    use Football::*;
-    if !matches!(event.id, Goals(_)) {
-        return None;
-    }
-    Some(event)
-}
-
 #[tokio::main]
 async fn main() {
-    let files = read::files("maybe_safe").unwrap();
-    let matches = files
-        .filter_map(|file| event::eat_match(file.as_str()).ok())
-        .filter_map(|m| {
-            fortuna::event::football::translate_match(m, filter_event)
-        });
-    let matches: Vec<_> = matches.collect();
-    if matches.is_empty() {
-        println!("no matches");
-        return;
-    }
+    let start = Instant::now();
+    dotenv().ok();
+    let db = db::connect().await;
+    let now = chrono::Utc::now();
+    let later = now + chrono::Duration::hours(12);
+    let fortuna =
+        match db::immediate_matches(&db, now, later, db::Source::Fortuna).await
+        {
+            Ok(match_urls) => match_urls,
+            Err(error) => {
+                println!("{:?}", error);
+                return;
+            }
+        };
+    let bmbets = match db::immediate_matches(
+        &db,
+        now,
+        later,
+        db::Source::Bmbets,
+    )
+    .await
+    {
+        Ok(match_urls) => match_urls,
+        Err(error) => {
+            println!("{:?}", error);
+            return;
+        }
+    };
+    let set_a: HashSet<_> = fortuna.into_iter().collect();
+    let set_b: HashSet<_> = bmbets.into_iter().collect();
+    let match_ids: Vec<_> =
+        set_a.difference(&set_b).map(|x| x.id.clone()).collect();
+    let match_urls =
+        match db::fetch_match_urls(&db, match_ids, db::Source::Fortuna).await {
+            Ok(xs) => xs,
+            Err(error) => {
+                println!("{:?}", error);
+                return;
+            }
+        };
+    println!("Elapsed time: {:.2?}", start.elapsed());
     let caps = json!({
         "moz:firefoxOptions": {},
         "pageLoadStrategy": "eager"
@@ -146,24 +127,20 @@ async fn main() {
         .connect(&browser::localhost(4444))
         .await
         .unwrap();
-    for m in matches {
-        let Some(hit) = get_hit(&mut client, &m).await else {
-            continue;
-        };
-        let m = match_filter(m, &hit, &mut client).await;
-        if m.events.is_empty() {
-            continue;
+    for match_url in match_urls {
+        let match_id = match_url.m.id.clone();
+        let m = match_url.m.without_id();
+        if let Some(hit) = get_hit(&mut client, &m).await {
+            println!("{:?}", hit);
+            let relate = db
+                .query(format!(
+                    "RELATE {match_id}->on->source:bmbets SET url=$url;"
+                ))
+                .bind(("url", hit.relative_url.clone()));
+            let r = relate.await;
+            println!("{:?}", r);
         }
-        let Ok((_i, url)) = fortuna::Url::eat(m.url.as_str(), ()) else {
-            continue;
-        };
-        println!("{}", m.url);
-        println!("{}{}", URL, hit.relative_url);
-        let Some(contents) = event::match_contents(&m) else {
-            continue;
-        };
-        let file = format!("safe/{}", url.name());
-        let _ = save(contents.as_bytes(), file).await;
     }
     client.close().await.unwrap();
+    println!("Elapsed time: {:.2?}", start.elapsed());
 }

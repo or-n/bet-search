@@ -33,7 +33,9 @@ async fn main() {
             })
             .await;
         let relate = db
-            .query(format!("RELATE match:{id}->on->book:fortuna SET url=$url;"))
+            .query(format!(
+                "RELATE match:{id}->on->source:fortuna SET url=$url;"
+            ))
             .bind(("url", m.url.clone()));
         match r {
             Ok(created) => {

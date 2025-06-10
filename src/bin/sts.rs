@@ -14,7 +14,7 @@ async fn main() {
         .unwrap();
     let page = sts::live::tennis::Page;
     let html = Tag::download(&mut client, page).await.unwrap();
-    // client.close().await.unwrap();
+    client.close().await.unwrap();
     let subpages = html.document().subpages();
     for subpage in subpages {
         println!("{} {}", subpage.url, subpage.tournament);

@@ -51,7 +51,6 @@ pub fn translate_db(x: Football, o: FootballOption) -> Result<db::Event, ()> {
                     Draw => None,
                     Player1 => Some(db::Player::P1),
                     Player2 => Some(db::Player::P2),
-                    _ => return Err(()),
                 },
                 ..db::Params::default()
             },

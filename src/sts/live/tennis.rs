@@ -27,62 +27,6 @@ impl Download<Client, Page> for Tag<Page, String> {
         browser::try_accepting_cookie(client, COOKIE_ACCEPT).await?;
         let mut previous_count = 0;
         let mut new_count;
-        // let scroll = r#"
-        //     let el = document.querySelector('app-live-events-list');
-        //     if (el) {
-        //         el.scrollTop = el.scrollHeight;
-        //         true;
-        //     } else {
-        //         false;
-        //     }
-        // "#;
-        // let scroll = r#"
-        //     let outer = document.querySelector('app-live-events-list');
-        //     if (outer && outer.shadowRoot) {
-        //         let scrollable = outer.shadowRoot.querySelector('div');  // Might need a more specific selector
-        //         if (scrollable) {
-        //             scrollable.scrollTop = scrollable.scrollHeight;
-        //             return true;
-        //         }
-        //     }
-        //     return false;
-        // "#;
-        // let scroll = r#"
-        //     let el = document.querySelector('app-live-events-list')?.shadowRoot?.querySelector('div');
-        //     el.dispatchEvent(new WheelEvent('wheel', { deltaY: 1000 }));
-        // "#;
-        // let scroll = r#"
-        //     let outer = document.querySelector('app-live-events-list');
-        //     if (!outer) {
-        //         console.log("Element app-live-events-list not found.");
-        //         return "outer-not-found";
-        //     }
-
-        //     if (!outer.shadowRoot) {
-        //         console.log("No shadowRoot on app-live-events-list.");
-        //         return "no-shadow-root";
-        //     }
-
-        //     let target = outer.shadowRoot.querySelector('div');
-        //     if (!target) {
-        //         console.log("No scrollable <div> inside shadowRoot.");
-        //         return "inner-div-not-found";
-        //     }
-
-        //     target.scrollTop = target.scrollHeight;
-        //     return "scrolled";
-        // "#;
-        // let scroll = r#"
-        //     // let outer = document.querySelector('app-live-events-list');
-        //     let outer = document.querySelector('.live-matchtiles-wrapper');
-        //     if (!outer || !outer.shadowRoot) return "fail: no outer or shadow";
-
-        //     let leagues = outer.shadowRoot.querySelectorAll('bb-live-league');
-        //     if (!leagues.length) return "fail: no leagues";
-
-        //     leagues[leagues.length - 1].scrollIntoView({ behavior: 'auto', block: 'end' });
-        //     return `scrolled to ${leagues.length}`;
-        // "#;
         let scroll = r#"
             let el = document.querySelector('.live-matchtiles-wrapper');
             if (!el) return "no .live-matchtiles-wrapper";

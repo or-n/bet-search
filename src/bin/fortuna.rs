@@ -5,38 +5,38 @@ use odds::{
         self,
         event::football::{translate_db, Football, FootballOption},
     },
-    shared::{db, event::translate_event2},
+    shared::{db, event::translate_event},
     utils::{browser, download::Download, page::Tag},
 };
 use std::{sync::Arc, time::Instant};
-use surrealdb::{engine::remote::ws::Client, Error, Surreal};
+use surrealdb::Error;
 use tokio::sync::Mutex;
-
-async fn get_matches(db: &Surreal<Client>) -> Result<Vec<db::MatchUrl>, Error> {
-    db.query(
-        "SELECT in, url FROM on
-        WHERE out = book:fortuna
-        AND in.date > time::now()
-        AND in.date < time::now() + 12h
-        FETCH in;
-    ",
-    )
-    .await?
-    .take(0)
-}
 
 #[tokio::main]
 async fn main() {
     let start = Instant::now();
     dotenv().ok();
     let db = db::connect().await;
-    let match_urls = match get_matches(&db).await {
-        Ok(match_urls) => match_urls,
-        Err(error) => {
-            println!("{:?}", error);
-            return;
-        }
-    };
+    let now = chrono::Utc::now();
+    let later = now + chrono::Duration::hours(12);
+    let match_ids =
+        match db::immediate_matches(&db, now, later, db::Source::Fortuna).await
+        {
+            Ok(xs) => xs,
+            Err(error) => {
+                println!("{:?}", error);
+                return;
+            }
+        };
+    let match_ids = match_ids.into_iter().map(|x| x.id).collect();
+    let match_urls =
+        match db::fetch_match_urls(&db, match_ids, db::Source::Fortuna).await {
+            Ok(xs) => xs,
+            Err(error) => {
+                println!("{:?}", error);
+                return;
+            }
+        };
     println!("Elapsed time: {:.2?}", start.elapsed());
     let mut client = ClientBuilder::native()
         .connect(&browser::localhost(4444))
@@ -70,7 +70,7 @@ async fn main() {
         let players = [m.player1, m.player2];
         let events = html.document().events();
         for event in events {
-            let r = translate_event2::<Football, FootballOption>(
+            let r = translate_event::<Football, FootballOption>(
                 event.clone(),
                 players.clone(),
             );
@@ -84,16 +84,6 @@ async fn main() {
                 }
             }
         }
-        // let events = shared::event::match_events_to_db(&m);
-        // for event in events {
-        //     let id = m.db_id();
-        //     let _response = db
-        //         .query(format!("CREATE real_event:{id} SET event={event};"))
-        //         .await
-        //         .unwrap();
-        //     println!("saved {id}");
-        //     save_count += 1;
-        // }
     }
     client.close().await.unwrap();
     let elapsed = start.elapsed().as_secs_f32();

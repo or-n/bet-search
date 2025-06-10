@@ -1,8 +1,5 @@
 use crate::fortuna::prematch::URL;
-use crate::shared::{
-    book::Subpages,
-    event::{Event, MatchEvents},
-};
+use crate::shared::{book::Subpages, event::Event};
 use crate::utils::{
     date,
     download::Download,
@@ -161,24 +158,4 @@ impl Url for Page {
     fn url(&self) -> String {
         format!("{}{}", URL, self.0)
     }
-}
-
-pub fn to_match_events(
-    url: String,
-    document: Tag<Page, Html>,
-) -> Option<MatchEvents<String, String>> {
-    let Some(players) = document.players() else {
-        return None;
-    };
-    let events = document.events();
-    if events.is_empty() {
-        return None;
-    }
-    let date = date::eat_assume_year(document.date().as_str())?;
-    Some(MatchEvents {
-        url,
-        date,
-        players,
-        events,
-    })
 }

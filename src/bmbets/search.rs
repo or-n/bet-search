@@ -19,7 +19,7 @@ pub async fn find_match(
     client.source().await
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Hit {
     pub players: [String; 2],
     pub date: NaiveDateTime,

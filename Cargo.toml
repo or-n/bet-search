@@ -28,10 +28,6 @@ name = "fortuna_matches"
 path = "src/bin/fortuna_matches.rs"
 
 [[bin]]
-name = "fortuna_text"
-path = "src/bin/fortuna_text.rs"
-
-[[bin]]
 name = "sts"
 path = "src/bin/sts.rs"
 

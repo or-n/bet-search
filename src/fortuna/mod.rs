@@ -1,7 +1,6 @@
 pub mod event;
 pub mod live;
 pub mod prematch;
-pub mod safe;
 use crate::utils::page::Name;
 use eat::*;
 
