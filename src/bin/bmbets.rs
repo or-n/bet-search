@@ -1,9 +1,10 @@
+use chrono::{DateTime, Duration, Local, Utc};
 use dotenv::dotenv;
 use fantoccini::{Client, ClientBuilder};
 use odds::{
     bmbets::search::{find_match, hits, Hit},
     shared::db,
-    utils::browser,
+    utils::{browser, date},
 };
 use scraper::Html;
 use serde_json::{json, Map};
@@ -37,7 +38,7 @@ async fn get_hit(client: &mut Client, m: &db::Match) -> Option<Hit> {
         if input.trim() == "skip" {
             return None;
         }
-        let Some(result) = get_match(client, &input).await else {
+        let Some(result) = get_match(client, &input, local).await else {
             println!("no hits");
             continue;
         };
@@ -47,10 +48,19 @@ async fn get_hit(client: &mut Client, m: &db::Match) -> Option<Hit> {
     }
 }
 
-async fn get_match(client: &mut Client, prompt: &str) -> Option<Option<Hit>> {
+async fn get_match(
+    client: &mut Client,
+    prompt: &str,
+    local: DateTime<Local>,
+) -> Option<Option<Hit>> {
     let html = find_match(client, prompt).await.unwrap();
     let document = Html::parse_document(&html);
     let hits = hits(document);
+    let hits = hits.into_iter().filter(|hit| {
+        let diff = local.signed_duration_since(date::to_local(hit.date));
+        diff.num_minutes().abs() < Duration::hours(12).num_minutes()
+    });
+    let hits: Vec<_> = hits.collect();
     if hits.is_empty() {
         return None;
     }
@@ -79,8 +89,8 @@ async fn main() {
     let start = Instant::now();
     dotenv().ok();
     let db = db::connect().await;
-    let now = chrono::Utc::now();
-    let later = now + chrono::Duration::hours(12);
+    let now = Utc::now();
+    let later = now + Duration::hours(12);
     let fortuna =
         match db::immediate_matches(&db, now, later, db::Source::Fortuna).await
         {
@@ -116,6 +126,7 @@ async fn main() {
                 return;
             }
         };
+    println!("matches: {}", match_urls.len());
     println!("Elapsed time: {:.2?}", start.elapsed());
     let caps = json!({
         "moz:firefoxOptions": {},
@@ -131,14 +142,16 @@ async fn main() {
         let match_id = match_url.m.id.clone();
         let m = match_url.m.without_id();
         if let Some(hit) = get_hit(&mut client, &m).await {
-            println!("{:?}", hit);
             let relate = db
                 .query(format!(
                     "RELATE {match_id}->on->source:bmbets SET url=$url;"
                 ))
                 .bind(("url", hit.relative_url.clone()));
             let r = relate.await;
-            println!("{:?}", r);
+            match r {
+                Ok(_) => println!("Ok(RELATE)"),
+                Err(error) => println!("{:?}", error),
+            }
         }
     }
     client.close().await.unwrap();
