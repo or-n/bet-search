@@ -47,7 +47,7 @@ async fn main() {
     let queue = Arc::new(Mutex::new(match_urls));
     let start = Instant::now();
     let mut download_count = 0;
-    let mut save_count = 0;
+    let save_count = 0;
     while let Some(match_url) = queue.lock().await.pop() {
         let m = match_url.m;
         let url = match_url.url;
@@ -59,7 +59,7 @@ async fn main() {
             .create("download")
             .content(db::Download {
                 date: chrono::Utc::now().into(),
-                m: m.id,
+                m: m.id.clone(),
                 source: db::Source::Fortuna,
             })
             .await;
@@ -80,6 +80,14 @@ async fn main() {
                     let r = translate_db(football_event.id, option);
                     if let Ok(db_event) = r {
                         println!("{:?}", db_event);
+                        let r: Result<Option<db::Record>, Error> = db
+                            .create("real_event")
+                            .content(db::MatchEvent {
+                                m: m.id.clone(),
+                                event: db_event.clone(),
+                            })
+                            .await;
+                        println!("{:?}", r);
                     }
                 }
             }

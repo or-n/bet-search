@@ -96,47 +96,31 @@ pub fn sanitize(x: &str) -> String {
         .collect()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub enum Football {
-    Win,
-    WinDiff,
-    WinEitherH1H2,
-    NotWin,
-    NotWinEitherH1FT,
-    Goals,
-    Not0GoalsP1P2,
-    Not0GoalsP1P2AndGoals,
-    Not0GoalsP1P2EitherH1H2,
-    Not0GoalsH1H2,
-    Targets,
-    YellowCards,
-    RedCards,
-    Corners,
-    Offsides,
-    Fouls,
-    Penalty,
+    #[default]
+    GoalD,
 }
 
-#[derive(Debug)]
-pub enum Player {
-    P1,
-    P2,
-}
-
-#[derive(Debug)]
+#[derive(Debug, Serialize, Default, Clone)]
 pub struct Event {
     pub tag: Football,
-    pub params: Params,
+    #[serde(rename = "time_min")]
+    pub ta: Option<f64>,
+    #[serde(rename = "time_max")]
+    pub tb: Option<f64>,
+    #[serde(rename = "min")]
+    pub a: Option<f64>,
+    #[serde(rename = "max")]
+    pub b: Option<f64>,
 }
 
-#[derive(Debug, Default)]
-pub struct Params {
-    pub player: Option<Player>,
-    pub time_min: Option<f64>,
-    pub time_max: Option<f64>,
-    pub min: Option<f64>,
-    pub max: Option<f64>,
-    pub handicap: Option<f64>,
+#[derive(Debug, Serialize)]
+pub struct MatchEvent {
+    #[serde(rename = "match")]
+    pub m: RecordId,
+    #[serde(flatten)]
+    pub event: Event,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -206,6 +190,35 @@ pub struct Record {
 pub struct InRecord {
     #[serde(rename = "in")]
     pub id: RecordId,
+}
+
+impl Serialize for Football {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let id_str = match self {
+            Football::GoalD => "football:goal_diff",
+        };
+        let thing: Thing = id_str.parse().unwrap();
+        thing.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Football {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let thing = Thing::deserialize(deserializer)?;
+        match thing.to_string().as_str() {
+            "football:goal_diff" => Ok(Football::GoalD),
+            other => Err(de::Error::custom(format!(
+                "Unknown football id: {}",
+                other
+            ))),
+        }
+    }
 }
 
 impl Serialize for Sport {

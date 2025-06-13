@@ -45,15 +45,18 @@ pub fn translate_db(x: Football, o: FootballOption) -> Result<db::Event, ()> {
     use FootballOption::*;
     match x {
         Win => Ok(db::Event {
-            tag: db::Football::Win,
-            params: db::Params {
-                player: match o {
-                    Draw => None,
-                    Player1 => Some(db::Player::P1),
-                    Player2 => Some(db::Player::P2),
-                },
-                ..db::Params::default()
+            tag: db::Football::GoalD,
+            a: match o {
+                Draw => Some(-0.5),
+                Player1 => None,
+                Player2 => Some(0.5),
             },
+            b: match o {
+                Draw => Some(0.5),
+                Player1 => Some(-0.5),
+                Player2 => None,
+            },
+            ..db::Event::default()
         }),
     }
 }
