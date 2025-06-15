@@ -959,7 +959,7 @@ dependencies = [
 [[package]]
 name = "eat"
 version = "0.1.0"
-source = "git+https://github.com/or-n/rust-minimalist-utils.git#75b989ead211702535924163f792782fbdc64c5f"
+source = "git+https://github.com/or-n/util-rust.git#75b989ead211702535924163f792782fbdc64c5f"
 
 [[package]]
 name = "ego-tree"

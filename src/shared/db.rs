@@ -25,24 +25,44 @@ pub async fn connect() -> Surreal<Client> {
     db
 }
 
-pub async fn immediate_matches(
+pub async fn matches_date(
     db: &Surreal<Client>,
-    now: DateTime<Utc>,
-    later: DateTime<Utc>,
+    date_range: [DateTime<Utc>; 2],
     source: Source,
-) -> Result<Vec<InRecord>, Error> {
-    let now: Datetime = now.into();
-    let later: Datetime = later.into();
+) -> Result<Vec<Record>, Error> {
+    let date_range: [Datetime; 2] = date_range.map(|x| x.into());
     db.query(
-        "SELECT in FROM on
+        "SELECT in AS id FROM on
         WHERE out = $source
-        AND in.date > $now
-        AND in.date < $later;
+        AND in.date IN $date_min>..$date_max;
     ",
     )
     .bind(("source", source))
-    .bind(("now", now))
-    .bind(("later", later))
+    .bind(("date_min", date_range[0].clone()))
+    .bind(("date_max", date_range[1].clone()))
+    .await?
+    .take(0)
+}
+
+pub async fn matches_date_odd(
+    db: &Surreal<Client>,
+    date_range: [DateTime<Utc>; 2],
+    book: Book,
+    range: [f64; 2],
+) -> Result<Vec<Record>, Error> {
+    let date_range: [Datetime; 2] = date_range.map(|x| x.into());
+    db.query(
+        "SELECT out.match as id FROM offers
+        WHERE in = $book
+        AND odd IN $min..=$max
+        AND out.match.date IN $date_min>..$date_max
+        FETCH out;",
+    )
+    .bind(("book", book))
+    .bind(("date_min", date_range[0].clone()))
+    .bind(("date_max", date_range[1].clone()))
+    .bind(("min", range[0]))
+    .bind(("max", range[1]))
     .await?
     .take(0)
 }
@@ -195,6 +215,11 @@ pub enum Sport {
 }
 
 #[derive(Debug)]
+pub enum Book {
+    Fortuna,
+}
+
+#[derive(Debug)]
 pub enum Source {
     Fortuna,
     Bmbets,
@@ -208,15 +233,9 @@ pub struct Download {
     pub source: Source,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Hash, PartialEq, Eq)]
 pub struct Record {
     #[allow(dead_code)]
-    pub id: RecordId,
-}
-
-#[derive(Debug, Deserialize, Hash, PartialEq, Eq)]
-pub struct InRecord {
-    #[serde(rename = "in")]
     pub id: RecordId,
 }
 
@@ -278,6 +297,34 @@ impl<'de> Deserialize<'de> for Sport {
             "sport:volleyball" => Ok(Sport::Volleyball),
             other => {
                 Err(de::Error::custom(format!("Unknown sport id: {}", other)))
+            }
+        }
+    }
+}
+
+impl Serialize for Book {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let id_str = match self {
+            Book::Fortuna => "book:fortuna",
+        };
+        let thing: Thing = id_str.parse().unwrap();
+        thing.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Book {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let thing = Thing::deserialize(deserializer)?;
+        match thing.to_string().as_str() {
+            "book:fortuna" => Ok(Book::Fortuna),
+            other => {
+                Err(de::Error::custom(format!("Unknown source id: {}", other)))
             }
         }
     }

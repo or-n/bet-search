@@ -92,23 +92,17 @@ async fn main() {
     let now = Utc::now();
     let later = now + Duration::hours(12);
     let fortuna =
-        match db::immediate_matches(&db, now, later, db::Source::Fortuna).await
-        {
-            Ok(match_urls) => match_urls,
-            Err(error) => {
-                println!("{:?}", error);
-                return;
-            }
-        };
-    let bmbets = match db::immediate_matches(
-        &db,
-        now,
-        later,
-        db::Source::Bmbets,
-    )
-    .await
-    {
-        Ok(match_urls) => match_urls,
+        db::matches_date_odd(&db, [now, later], db::Book::Fortuna, [3., 3.5]);
+    let fortuna = match fortuna.await {
+        Ok(ids) => ids,
+        Err(error) => {
+            println!("{:?}", error);
+            return;
+        }
+    };
+    let bmbets = db::matches_date(&db, [now, later], db::Source::Bmbets);
+    let bmbets = match bmbets.await {
+        Ok(ids) => ids,
         Err(error) => {
             println!("{:?}", error);
             return;

@@ -20,15 +20,13 @@ async fn main() {
     let now = chrono::Utc::now();
     let later = now + chrono::Duration::hours(12);
     let match_ids =
-        match db::immediate_matches(&db, now, later, db::Source::Fortuna).await
-        {
-            Ok(xs) => xs,
+        match db::matches_date(&db, [now, later], db::Source::Fortuna).await {
+            Ok(xs) => xs.into_iter().map(|x| x.id).collect(),
             Err(error) => {
                 println!("{:?}", error);
                 return;
             }
         };
-    let match_ids = match_ids.into_iter().map(|x| x.id).collect();
     let match_urls =
         match db::fetch_match_urls(&db, match_ids, db::Source::Fortuna).await {
             Ok(xs) => xs,
