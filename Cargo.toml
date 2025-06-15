@@ -32,6 +32,10 @@ name = "sts"
 path = "src/bin/sts.rs"
 
 [[bin]]
+name = "bmbets_matches"
+path = "src/bin/bmbets_matches.rs"
+
+[[bin]]
 name = "bmbets"
 path = "src/bin/bmbets.rs"
 
