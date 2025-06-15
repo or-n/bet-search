@@ -55,7 +55,7 @@ async fn main() {
         let subpage = fortuna::prematch::football::subpage::Page(url.clone());
         let html = Tag::download(&mut client, subpage.clone()).await.unwrap();
         download_count += 1;
-        let r: Result<Option<db::Record>, Error> = db
+        let download: Result<Option<db::Record>, Error> = db
             .create("download")
             .content(db::Download {
                 date: chrono::Utc::now().into(),
@@ -63,10 +63,13 @@ async fn main() {
                 source: db::Source::Fortuna,
             })
             .await;
-        if let Err(error) = r {
-            println!("{:?}", error);
-            continue;
-        }
+        let download_record = match download {
+            Ok(option) => option.unwrap(),
+            Err(error) => {
+                println!("{:?}", error);
+                continue;
+            }
+        };
         let players = [m.player1, m.player2];
         let events = html.document().events();
         for event in events {
@@ -74,21 +77,60 @@ async fn main() {
                 event.clone(),
                 players.clone(),
             );
-            if let Some(football_event) = r {
-                println!("{:?}", football_event);
-                for (option, _odd) in football_event.odds {
-                    let r = translate_db(football_event.id, option);
-                    if let Ok(db_event) = r {
-                        println!("{:?}", db_event);
-                        let r: Result<Option<db::Record>, Error> = db
-                            .create("real_event")
-                            .content(db::MatchEvent {
-                                m: m.id.clone(),
-                                event: db_event.clone(),
-                            })
-                            .await;
-                        println!("{:?}", r);
+            let football_event = match r {
+                Some(x) => x,
+                None => continue,
+            };
+            println!("{:?}", football_event);
+            for (option, odd) in football_event.odds {
+                let r = translate_db(football_event.id, option);
+                let db_event = match r {
+                    Ok(x) => x,
+                    Err(()) => continue,
+                };
+                println!("{:?}", db_event);
+                let event_record: db::Record = {
+                    let r = db::event_ids(&db, db_event.clone()).await;
+                    let exists = match r {
+                        Ok(ids) => ids.into_iter().next(),
+                        _ => None,
+                    };
+                    if let Some(id) = exists {
+                        println!("Ok(EXISTS)");
+                        id
+                    } else {
+                        let create_event: Result<Option<db::Record>, Error> =
+                            db.create("real_event")
+                                .content(db::MatchEvent {
+                                    m: m.id.clone(),
+                                    event: db_event.clone(),
+                                })
+                                .await;
+                        match create_event {
+                            Ok(option) => {
+                                println!("Ok(CREATE)");
+                                option.unwrap()
+                            }
+                            Err(error) => {
+                                println!("{:?}", error);
+                                return;
+                            }
+                        }
                     }
+                };
+                let relate = db
+                    .query(
+                        "RELATE book:fortuna->offers->$event SET
+                        odd=$odd,
+                        download=$download;",
+                    )
+                    .bind(("event", event_record.id))
+                    .bind(("odd", odd))
+                    .bind(("download", download_record.id.clone()))
+                    .await;
+                match relate {
+                    Ok(_) => println!("Ok(RELATE)"),
+                    Err(error) => println!("{:?}", error),
                 }
             }
         }

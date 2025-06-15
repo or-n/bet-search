@@ -65,6 +65,27 @@ pub async fn fetch_match_urls(
     .take(0)
 }
 
+pub async fn event_ids(
+    db: &Surreal<Client>,
+    e: Event,
+) -> Result<Vec<Record>, Error> {
+    db.query(
+        "SELECT id FROM real_event
+        WHERE tag=$tag
+        AND time_min=$ta
+        AND time_max=$tb
+        AND min=$a
+        AND max=$b",
+    )
+    .bind(("tag", e.tag))
+    .bind(("ta", e.ta))
+    .bind(("tb", e.tb))
+    .bind(("a", e.a))
+    .bind(("b", e.b))
+    .await?
+    .take(0)
+}
+
 pub fn sanitize(x: &str) -> String {
     x.chars()
         .map(|c| match c {
@@ -113,6 +134,7 @@ pub struct Event {
     pub a: Option<f64>,
     #[serde(rename = "max")]
     pub b: Option<f64>,
+    pub result: Option<EventResult>,
 }
 
 #[derive(Debug, Serialize)]
@@ -121,6 +143,12 @@ pub struct MatchEvent {
     pub m: RecordId,
     #[serde(flatten)]
     pub event: Event,
+}
+
+#[derive(Debug, Clone)]
+pub enum EventResult {
+    Hit,
+    Miss,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -280,6 +308,36 @@ impl<'de> Deserialize<'de> for Source {
             "source:bmbets" => Ok(Source::Bmbets),
             other => {
                 Err(de::Error::custom(format!("Unknown source id: {}", other)))
+            }
+        }
+    }
+}
+
+impl Serialize for EventResult {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let id_str = match self {
+            EventResult::Hit => "result:hit",
+            EventResult::Miss => "result:miss",
+        };
+        let thing: Thing = id_str.parse().unwrap();
+        thing.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for EventResult {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let thing = Thing::deserialize(deserializer)?;
+        match thing.to_string().as_str() {
+            "result:hit" => Ok(EventResult::Hit),
+            "result:miss" => Ok(EventResult::Miss),
+            other => {
+                Err(de::Error::custom(format!("Unknown result id: {}", other)))
             }
         }
     }
