@@ -72,7 +72,7 @@ pub async fn events_match_odd(
     m: RecordId,
     book: Book,
     range: [f64; 2],
-) -> Result<Vec<Event>, Error> {
+) -> Result<Vec<EventWithOdd>, Error> {
     db.query(
         "SELECT
             out.tag as tag,
@@ -80,7 +80,8 @@ pub async fn events_match_odd(
             out.time_max as time_max,
             out.min as min,
             out.max as max,
-            out.result as result
+            out.result as result,
+            odd
         FROM offers
         WHERE in = $book
         AND odd IN $min..=$max
@@ -183,6 +184,21 @@ pub struct Event {
     #[serde(rename = "max")]
     pub b: Option<f64>,
     pub result: Option<EventResult>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+pub struct EventWithOdd {
+    pub tag: Football,
+    #[serde(rename = "time_min")]
+    pub ta: Option<f64>,
+    #[serde(rename = "time_max")]
+    pub tb: Option<f64>,
+    #[serde(rename = "min")]
+    pub a: Option<f64>,
+    #[serde(rename = "max")]
+    pub b: Option<f64>,
+    pub result: Option<EventResult>,
+    pub odd: f64,
 }
 
 #[derive(Debug, Serialize)]

@@ -50,7 +50,10 @@ async fn main() {
             db::events_match_odd(&db, m.id, db::Book::Fortuna, [3., 3.5]);
         let events = match events.await {
             Ok(x) => x,
-            _ => continue,
+            Err(error) => {
+                println!("{:?}", error);
+                continue;
+            }
         };
         for event in events {
             println!("{:?}", event);
