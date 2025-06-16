@@ -80,7 +80,6 @@ pub async fn events_match_odd(
             out.time_max as time_max,
             out.min as min,
             out.max as max,
-            out.result as result,
             odd
         FROM offers
         WHERE in = $book
@@ -183,7 +182,6 @@ pub struct Event {
     pub a: Option<f64>,
     #[serde(rename = "max")]
     pub b: Option<f64>,
-    pub result: Option<EventResult>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
@@ -197,7 +195,6 @@ pub struct EventWithOdd {
     pub a: Option<f64>,
     #[serde(rename = "max")]
     pub b: Option<f64>,
-    pub result: Option<EventResult>,
     pub odd: f64,
 }
 
