@@ -22,7 +22,7 @@ async fn main() {
     };
     let match_ids: Vec<_> = bmbets.into_iter().map(|x| x.id).collect();
     let match_urls =
-        match db::fetch_match_urls(&db, match_ids, db::Source::Fortuna).await {
+        match db::fetch_match_urls(&db, match_ids, db::Source::Bmbets).await {
             Ok(xs) => xs,
             Err(error) => {
                 println!("{:?}", error);
@@ -43,7 +43,18 @@ async fn main() {
         .unwrap();
     for match_url in match_urls {
         let m = match_url.m;
+        let url = match_url.url;
         println!("{} - {}", m.player1, m.player2);
+        println!("{}", url);
+        let events =
+            db::events_match_odd(&db, m.id, db::Book::Fortuna, [3., 3.5]);
+        let events = match events.await {
+            Ok(x) => x,
+            _ => continue,
+        };
+        for event in events {
+            println!("{:?}", event);
+        }
     }
     client.close().await.unwrap();
     println!("Elapsed time: {:.2?}", start.elapsed());

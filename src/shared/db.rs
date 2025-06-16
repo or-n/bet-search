@@ -67,6 +67,34 @@ pub async fn matches_date_odd(
     .take(0)
 }
 
+pub async fn events_match_odd(
+    db: &Surreal<Client>,
+    m: RecordId,
+    book: Book,
+    range: [f64; 2],
+) -> Result<Vec<Event>, Error> {
+    db.query(
+        "SELECT
+            out.tag as tag,
+            out.time_min as time_min,
+            out.time_max as time_max,
+            out.min as min,
+            out.max as max,
+            out.result as result
+        FROM offers
+        WHERE in = $book
+        AND odd IN $min..=$max
+        AND out.match = $match
+        FETCH out;",
+    )
+    .bind(("book", book))
+    .bind(("min", range[0]))
+    .bind(("max", range[1]))
+    .bind(("match", m))
+    .await?
+    .take(0)
+}
+
 pub async fn fetch_match_urls(
     db: &Surreal<Client>,
     ids: Vec<RecordId>,
@@ -143,7 +171,7 @@ pub enum Football {
     GoalD,
 }
 
-#[derive(Debug, Serialize, Default, Clone)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Event {
     pub tag: Football,
     #[serde(rename = "time_min")]
