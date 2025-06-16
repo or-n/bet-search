@@ -90,7 +90,7 @@ async fn main() {
     dotenv().ok();
     let db = db::connect().await;
     let now = Utc::now();
-    let later = now + Duration::hours(12);
+    let later = now + Duration::hours(db::prematch_hours());
     let fortuna =
         db::matches_date_odd(&db, [now, later], db::Book::Fortuna, [3., 3.5]);
     let fortuna = match fortuna.await {

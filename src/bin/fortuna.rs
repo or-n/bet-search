@@ -1,3 +1,4 @@
+use chrono::{Duration, Utc};
 use dotenv::dotenv;
 use fantoccini::ClientBuilder;
 use odds::{
@@ -17,8 +18,8 @@ async fn main() {
     let start = Instant::now();
     dotenv().ok();
     let db = db::connect().await;
-    let now = chrono::Utc::now();
-    let later = now + chrono::Duration::hours(12);
+    let now = Utc::now();
+    let later = now + Duration::hours(db::prematch_hours());
     let match_ids =
         match db::matches_date(&db, [now, later], db::Source::Fortuna).await {
             Ok(xs) => xs.into_iter().map(|x| x.id).collect(),
@@ -56,7 +57,7 @@ async fn main() {
         let download: Result<Option<db::Record>, Error> = db
             .create("download")
             .content(db::Download {
-                date: chrono::Utc::now().into(),
+                date: Utc::now().into(),
                 m: m.id.clone(),
                 source: db::Source::Fortuna,
             })
@@ -88,8 +89,8 @@ async fn main() {
                 };
                 println!("{:?}", db_event);
                 let event_record: db::Record = {
-                    let r = db::event_ids(&db, db_event.clone()).await;
-                    let exists = match r {
+                    let exists = db::event_ids(&db, db_event.clone());
+                    let exists = match exists.await {
                         Ok(ids) => ids.into_iter().next(),
                         _ => None,
                     };

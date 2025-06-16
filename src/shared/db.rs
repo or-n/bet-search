@@ -8,6 +8,13 @@ use surrealdb::{
     Error, RecordId, Surreal,
 };
 
+pub fn prematch_hours() -> i64 {
+    env::var("PREMATCH_HOURS")
+        .expect("PREMATCH_HOURS")
+        .parse()
+        .expect("PREMATCH_HOURS")
+}
+
 pub async fn connect() -> Surreal<Client> {
     let url = env::var("DB_URL").expect("DB_URL");
     let user = env::var("DB_USERNAME").expect("DB_USERNAME");

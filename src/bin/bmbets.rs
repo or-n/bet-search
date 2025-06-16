@@ -11,7 +11,7 @@ async fn main() {
     dotenv().ok();
     let db = db::connect().await;
     let now = Utc::now();
-    let later = now + Duration::hours(12);
+    let later = now + Duration::hours(db::prematch_hours());
     let bmbets = db::matches_date(&db, [now, later], db::Source::Bmbets);
     let bmbets = match bmbets.await {
         Ok(ids) => ids,
