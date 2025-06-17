@@ -89,49 +89,54 @@ async fn main() {
     let start = Instant::now();
     dotenv().ok();
     let db = db::connect().await;
-    let now = Utc::now();
-    let later = now + Duration::hours(db::prematch_hours());
-    let fortuna =
-        db::matches_date_odd(&db, [now, later], db::Book::Fortuna, [3., 3.5]);
-    let fortuna = match fortuna.await {
-        Ok(ids) => ids,
-        Err(error) => {
-            println!("{:?}", error);
-            return;
-        }
-    };
-    let bmbets = db::matches_date(&db, [now, later], db::Source::Bmbets);
-    let bmbets = match bmbets.await {
-        Ok(ids) => ids,
-        Err(error) => {
-            println!("{:?}", error);
-            return;
-        }
-    };
-    let set_a: HashSet<_> = fortuna.into_iter().collect();
-    let set_b: HashSet<_> = bmbets.into_iter().collect();
-    let match_ids: Vec<_> =
-        set_a.difference(&set_b).map(|x| x.id.clone()).collect();
-    let match_urls =
-        match db::fetch_match_urls(&db, match_ids, db::Source::Fortuna).await {
-            Ok(xs) => xs,
-            Err(error) => {
-                println!("{:?}", error);
-                return;
-            }
+    let match_urls = {
+        let match_ids: Vec<_> = {
+            let now = Utc::now();
+            let later = now + Duration::hours(db::prematch_hours());
+            let set_a: HashSet<_> = {
+                let fortuna = db::matches_date_odd(
+                    &db,
+                    [now, later],
+                    db::Book::Fortuna,
+                    [3., 3.5],
+                );
+                let ids = fortuna.await.unwrap_or_else(|error| {
+                    println!("{:?}", error);
+                    panic!()
+                });
+                ids.into_iter().collect()
+            };
+            let set_b: HashSet<_> = {
+                let bmbets =
+                    db::matches_date(&db, [now, later], db::Source::Bmbets);
+                let ids = bmbets.await.unwrap_or_else(|error| {
+                    println!("{:?}", error);
+                    panic!()
+                });
+                ids.into_iter().collect()
+            };
+            set_a.difference(&set_b).map(|x| x.id.clone()).collect()
         };
+        let urls = db::fetch_match_urls(&db, match_ids, db::Source::Fortuna);
+        urls.await.unwrap_or_else(|error| {
+            println!("{:?}", error);
+            panic!()
+        })
+    };
     println!("matches: {}", match_urls.len());
     println!("Elapsed time: {:.2?}", start.elapsed());
-    let caps = json!({
-        "moz:firefoxOptions": {},
-        "pageLoadStrategy": "eager"
-    });
-    let caps: Map<_, _> = caps.as_object().unwrap().clone();
-    let mut client = ClientBuilder::native()
-        .capabilities(caps)
-        .connect(&browser::localhost(4444))
-        .await
-        .unwrap();
+    let mut client = {
+        let caps = json!({
+            "moz:firefoxOptions": {},
+            "pageLoadStrategy": "eager"
+        });
+        let caps: Map<_, _> = caps.as_object().unwrap().clone();
+        ClientBuilder::native()
+            .capabilities(caps)
+            .connect(&browser::localhost(4444))
+            .await
+            .unwrap()
+    };
     for match_url in match_urls {
         let match_id = match_url.m.id.clone();
         let m = match_url.m.without_id();
@@ -141,8 +146,7 @@ async fn main() {
                     "RELATE {match_id}->on->source:bmbets SET url=$url;"
                 ))
                 .bind(("url", hit.relative_url.clone()));
-            let r = relate.await;
-            match r {
+            match relate.await {
                 Ok(_) => println!("Ok(RELATE)"),
                 Err(error) => println!("{:?}", error),
             }

@@ -18,12 +18,14 @@ async fn main() {
         .connect(&browser::localhost(4444))
         .await
         .unwrap();
-    let page = fortuna::prematch::football::Page;
-    let html = Tag::download(&mut client, page).await.unwrap();
-    let matches = html.document().matches();
+    let matches = {
+        let page = fortuna::prematch::football::Page;
+        let html = Tag::download(&mut client, page).await.unwrap();
+        html.document().matches()
+    };
     for m in &matches {
         let id = m.db_id();
-        let r: Result<Option<db::Record>, Error> = db
+        let create: Result<Option<db::Record>, Error> = db
             .create(("match", id.clone()))
             .content(db::Match {
                 date: date::to_local(m.date).with_timezone(&Utc).into(),
@@ -37,7 +39,7 @@ async fn main() {
                 "RELATE match:{id}->on->source:fortuna SET url=$url;"
             ))
             .bind(("url", m.url.clone()));
-        match r {
+        match create {
             Ok(created) => {
                 println!("{id} {:?}", created);
                 let r = relate.await;

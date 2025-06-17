@@ -18,24 +18,21 @@ async fn main() {
     let start = Instant::now();
     dotenv().ok();
     let db = db::connect().await;
-    let now = Utc::now();
-    let later = now + Duration::hours(db::prematch_hours());
-    let match_ids =
-        match db::matches_date(&db, [now, later], db::Source::Fortuna).await {
-            Ok(xs) => xs.into_iter().map(|x| x.id).collect(),
-            Err(error) => {
-                println!("{:?}", error);
-                return;
-            }
-        };
-    let match_urls =
-        match db::fetch_match_urls(&db, match_ids, db::Source::Fortuna).await {
-            Ok(xs) => xs,
-            Err(error) => {
-                println!("{:?}", error);
-                return;
-            }
-        };
+    let match_urls = {
+        let now = Utc::now();
+        let later = now + Duration::hours(db::prematch_hours());
+        let ids = db::matches_date(&db, [now, later], db::Source::Fortuna);
+        let ids = ids.await.unwrap_or_else(|error| {
+            println!("{:?}", error);
+            panic!()
+        });
+        let ids = ids.into_iter().map(|x| x.id).collect();
+        let urls = db::fetch_match_urls(&db, ids, db::Source::Fortuna);
+        urls.await.unwrap_or_else(|error| {
+            println!("{:?}", error);
+            panic!()
+        })
+    };
     println!("Elapsed time: {:.2?}", start.elapsed());
     let mut client = ClientBuilder::native()
         .connect(&browser::localhost(4444))
