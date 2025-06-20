@@ -25,8 +25,11 @@ pub fn tab(event: db::Event) -> Option<Tab> {
     match event.tag {
         db::Football::GoalD => match (event.a, event.b) {
             (Some(0.5), None) => Some(Tab::Winner),
+            (Some(-0.5), None) => Some(Tab::DoubleChance),
             (None, Some(-0.5)) => Some(Tab::Winner),
+            (None, Some(0.5)) => Some(Tab::DoubleChance),
             (Some(-0.5), Some(0.5)) => Some(Tab::Winner),
+            (Some(0.5), Some(-0.5)) => Some(Tab::DoubleChance),
             _ => None,
         },
     }
