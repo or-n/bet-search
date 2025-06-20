@@ -19,10 +19,6 @@ pub async fn dropdown(client: &mut Client) -> Result<(), CmdError> {
     Ok(())
 }
 
-pub async fn tab(client: &mut Client) -> Result<Element, CmdError> {
-    client.wait().for_element(Css(TAB)).await
-}
-
 pub async fn toolbar(client: &mut Client) -> Result<Element, CmdError> {
     let toolbar = client.wait().for_element(Css(TOOLBAR)).await?;
     let divs = toolbar.find_all(Css("div")).await?;
@@ -35,7 +31,10 @@ pub async fn toolbar(client: &mut Client) -> Result<Element, CmdError> {
     Err(CmdError::Standard(webdriver))
 }
 
-pub async fn links(list: Element) -> Result<Vec<(String, Element)>, CmdError> {
+pub async fn tab_links(
+    client: &mut Client,
+) -> Result<Vec<(String, Element)>, CmdError> {
+    let list = client.wait().for_element(Css(TAB)).await?;
     let links = list.find_all(Css("a")).await?;
     Ok(join_all(links.into_iter().map(|link| async move {
         let name = link.html(true).await.unwrap_or_else(|_| "".to_string());

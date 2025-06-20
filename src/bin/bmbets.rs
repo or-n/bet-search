@@ -1,9 +1,34 @@
 use chrono::{Duration, Utc};
 use dotenv::dotenv;
-use fantoccini::ClientBuilder;
-use odds::{shared::db, utils::browser};
+use eat::*;
+use fantoccini::{error::CmdError, Client, ClientBuilder};
+use odds::{
+    bmbets::{football, menu},
+    shared::db,
+    utils::browser,
+};
 use serde_json::{json, Map};
 use std::time::Instant;
+use tokio::time;
+
+async fn goto(
+    client: &mut Client,
+    event: db::EventWithOdd,
+) -> Result<(), CmdError> {
+    let e = event.without_odd();
+    let event_tab = football::tab(e).unwrap();
+    menu::dropdown(client).await?;
+    let tab_links = menu::tab_links(client).await?;
+    for (name, button) in tab_links {
+        if let Ok(("", tab)) = football::Tab::eat(name.as_str(), ()) {
+            if tab == event_tab {
+                println!("{:?}", tab);
+                button.click().await?;
+            }
+        }
+    }
+    Ok(())
+}
 
 #[tokio::main]
 async fn main() {
@@ -30,7 +55,7 @@ async fn main() {
     };
     println!("matches: {}", match_urls.len());
     println!("Elapsed time: {:.2?}", start.elapsed());
-    let client = {
+    let mut client = {
         let caps = json!({
             "moz:firefoxOptions": {},
             "pageLoadStrategy": "eager"
@@ -42,11 +67,15 @@ async fn main() {
             .await
             .unwrap()
     };
+    let _ = client.goto("https://bmbets.com").await;
+    time::sleep(time::Duration::from_secs(4)).await;
     for match_url in match_urls {
         let m = match_url.m;
-        let _url = match_url.url;
+        let url = match_url.url;
         println!("{} - {}", m.player1, m.player2);
         println!("{}", m.id);
+        let _ = client.goto(&url).await;
+        time::sleep(time::Duration::from_secs(1)).await;
         let events = {
             let events =
                 db::events_match_odd(&db, m.id, db::Book::Fortuna, [3., 3.5]);
@@ -57,6 +86,7 @@ async fn main() {
         };
         for event in events {
             println!("{:?}", event);
+            let _ = goto(&mut client, event).await;
         }
     }
     client.close().await.unwrap();

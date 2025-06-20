@@ -1,3 +1,4 @@
+use crate::shared::db;
 use eat::*;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -18,6 +19,17 @@ pub enum Tab {
     DrawNoBet,
     ExactGoalsNumber,
     Penalty,
+}
+
+pub fn tab(event: db::Event) -> Option<Tab> {
+    match event.tag {
+        db::Football::GoalD => match (event.a, event.b) {
+            (Some(0.5), None) => Some(Tab::Winner),
+            (None, Some(-0.5)) => Some(Tab::Winner),
+            (Some(-0.5), Some(0.5)) => Some(Tab::Winner),
+            _ => None,
+        },
+    }
 }
 
 impl Eat<&str, (), ()> for Tab {

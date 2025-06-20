@@ -207,6 +207,18 @@ pub struct EventWithOdd {
     pub odd: f64,
 }
 
+impl EventWithOdd {
+    pub fn without_odd(self) -> Event {
+        Event {
+            tag: self.tag,
+            ta: self.ta,
+            tb: self.tb,
+            a: self.a,
+            b: self.b,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Clone)]
 pub struct MatchEvent {
     #[serde(rename = "match")]
