@@ -48,70 +48,74 @@ async fn main() {
         let m = match_url.m;
         let url = match_url.url;
         println!("{} - {}", m.player1, m.player2);
-        let subpage = fortuna::prematch::football::subpage::Page(url.clone());
-        let html = Tag::download(&mut client, subpage.clone()).await.unwrap();
-        download_count += 1;
-        let download: Result<Option<db::Record>, Error> = db
-            .create("download")
-            .content(db::Download {
-                date: Utc::now().into(),
-                m: m.id.clone(),
-                source: db::Source::Fortuna,
-            })
-            .await;
-        let download_record = match download {
-            Ok(option) => option.unwrap(),
-            Err(error) => {
-                println!("{:?}", error);
-                continue;
+        let events = {
+            let subpage =
+                fortuna::prematch::football::subpage::Page(url.clone());
+            let html =
+                Tag::download(&mut client, subpage.clone()).await.unwrap();
+            download_count += 1;
+            html.document().events()
+        };
+        let download_record = {
+            let download: Result<Option<db::Record>, Error> = db
+                .create("download")
+                .content(db::Download {
+                    date: Utc::now().into(),
+                    m: m.id.clone(),
+                    source: db::Source::Fortuna,
+                })
+                .await;
+            match download {
+                Ok(option) => option.unwrap(),
+                Err(error) => {
+                    println!("{:?}", error);
+                    continue;
+                }
             }
         };
         let players = [m.player1, m.player2];
-        let events = html.document().events();
         for event in events {
-            let r = translate_event::<Football, FootballOption>(
-                event.clone(),
-                players.clone(),
-            );
-            let football_event = match r {
-                Some(x) => x,
-                None => continue,
+            let football_event = {
+                let translate = translate_event::<Football, FootballOption>(
+                    event.clone(),
+                    players.clone(),
+                );
+                match translate {
+                    Some(x) => x,
+                    _ => continue,
+                }
             };
             println!("{:?}", football_event);
             for (option, odd) in football_event.odds {
-                let r = translate_db(football_event.id, option);
-                let db_event = match r {
-                    Ok(x) => x,
-                    Err(()) => continue,
+                let db_event = {
+                    let translate = translate_db(football_event.id, option);
+                    match translate {
+                        Ok(x) => x,
+                        Err(()) => continue,
+                    }
                 };
                 println!("{:?}", db_event);
                 let event_record: db::Record = {
-                    let exists = db::event_ids(&db, db_event.clone());
-                    let exists = match exists.await {
-                        Ok(ids) => ids.into_iter().next(),
-                        _ => None,
+                    let match_event = db::MatchEvent {
+                        m: m.id.clone(),
+                        event: db_event.clone(),
+                    };
+                    let exists = {
+                        let ids = db::event_ids(&db, match_event.clone());
+                        ids.await.unwrap_or(vec![]).into_iter().next()
                     };
                     if let Some(id) = exists {
                         println!("Ok(EXISTS)");
                         id
                     } else {
                         let create_event: Result<Option<db::Record>, Error> =
-                            db.create("real_event")
-                                .content(db::MatchEvent {
-                                    m: m.id.clone(),
-                                    event: db_event.clone(),
-                                })
-                                .await;
-                        match create_event {
-                            Ok(option) => {
-                                println!("Ok(CREATE)");
-                                option.unwrap()
-                            }
-                            Err(error) => {
-                                println!("{:?}", error);
-                                return;
-                            }
-                        }
+                            db.create("real_event").content(match_event).await;
+                        let option = create_event.unwrap_or_else(|error| {
+                            println!("{:?}", error);
+                            panic!()
+                        });
+                        println!("Ok(CREATE)");
+                        option.unwrap()
                     }
                 };
                 let relate = db
@@ -122,9 +126,8 @@ async fn main() {
                     )
                     .bind(("event", event_record.id))
                     .bind(("odd", odd))
-                    .bind(("download", download_record.id.clone()))
-                    .await;
-                match relate {
+                    .bind(("download", download_record.id.clone()));
+                match relate.await {
                     Ok(_) => println!("Ok(RELATE)"),
                     Err(error) => println!("{:?}", error),
                 }

@@ -59,11 +59,10 @@ pub async fn matches_date_odd(
 ) -> Result<Vec<Record>, Error> {
     let date_range: [Datetime; 2] = date_range.map(|x| x.into());
     db.query(
-        "SELECT out.match as id FROM offers
+        "SELECT download.match as id FROM offers
         WHERE in = $book
         AND odd IN $min..=$max
-        AND out.match.date IN $date_min>..$date_max
-        FETCH out;",
+        AND download.match.date IN $date_min>..$date_max;",
     )
     .bind(("book", book))
     .bind(("date_min", date_range[0].clone()))
@@ -83,7 +82,7 @@ pub async fn events_match_odd(
     db.query(
         "SELECT
             out.tag as tag,
-            out.time_min as time_min,
+            out.out.time_min as time_min,
             out.time_max as time_max,
             out.min as min,
             out.max as max,
@@ -122,21 +121,24 @@ pub async fn fetch_match_urls(
 
 pub async fn event_ids(
     db: &Surreal<Client>,
-    e: Event,
+    match_event: MatchEvent,
 ) -> Result<Vec<Record>, Error> {
+    let e = match_event.event;
     db.query(
         "SELECT id FROM real_event
         WHERE tag=$tag
         AND time_min=$ta
         AND time_max=$tb
         AND min=$a
-        AND max=$b",
+        AND max=$b
+        AND match=$m",
     )
     .bind(("tag", e.tag))
     .bind(("ta", e.ta))
     .bind(("tb", e.tb))
     .bind(("a", e.a))
     .bind(("b", e.b))
+    .bind(("m", match_event.m))
     .await?
     .take(0)
 }
@@ -205,7 +207,7 @@ pub struct EventWithOdd {
     pub odd: f64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct MatchEvent {
     #[serde(rename = "match")]
     pub m: RecordId,
