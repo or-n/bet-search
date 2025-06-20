@@ -34,6 +34,7 @@ async fn goto(
 async fn main() {
     let start = Instant::now();
     dotenv().ok();
+    let odds_range = [db::prematch_odds_min(), db::prematch_odds_max()];
     let db = db::connect().await;
     let match_urls = {
         let match_ids: Vec<_> = {
@@ -78,7 +79,7 @@ async fn main() {
         time::sleep(time::Duration::from_secs(1)).await;
         let events = {
             let events =
-                db::events_match_odd(&db, m.id, db::Book::Fortuna, [3., 3.5]);
+                db::events_match_odd(&db, m.id, db::Book::Fortuna, odds_range);
             events.await.unwrap_or_else(|error| {
                 println!("{:?}", error);
                 vec![]

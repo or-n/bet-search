@@ -58,7 +58,8 @@ async fn get_match(
     let hits = hits(document);
     let hits = hits.into_iter().filter(|hit| {
         let diff = local.signed_duration_since(date::to_local(hit.date));
-        diff.num_minutes().abs() < Duration::hours(12).num_minutes()
+        diff.num_minutes().abs()
+            < Duration::hours(db::prematch_hours()).num_minutes()
     });
     let hits: Vec<_> = hits.collect();
     if hits.is_empty() {
@@ -89,6 +90,7 @@ async fn main() {
     let start = Instant::now();
     dotenv().ok();
     let db = db::connect().await;
+    let odds_range = [prematch_odds_min(), prematch_odds_max()];
     let match_urls = {
         let match_ids: Vec<_> = {
             let now = Utc::now();
@@ -98,7 +100,7 @@ async fn main() {
                     &db,
                     [now, later],
                     db::Book::Fortuna,
-                    [3., 3.5],
+                    odds_range,
                 );
                 let ids = fortuna.await.unwrap_or_else(|error| {
                     println!("{:?}", error);

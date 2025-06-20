@@ -15,6 +15,20 @@ pub fn prematch_hours() -> i64 {
         .expect("PREMATCH_HOURS")
 }
 
+pub fn prematch_odds_min() -> f64 {
+    env::var("PREMATCH_ODDS_MIN")
+        .expect("PREMATCH_ODDS_MIN")
+        .parse()
+        .expect("PREMATCH_ODDS_MIN")
+}
+
+pub fn prematch_odds_max() -> f64 {
+    env::var("PREMATCH_ODDS_MAX")
+        .expect("PREMATCH_ODDS_MAX")
+        .parse()
+        .expect("PREMATCH_ODDS_MAX")
+}
+
 pub async fn connect() -> Surreal<Client> {
     let url = env::var("DB_URL").expect("DB_URL");
     let user = env::var("DB_USERNAME").expect("DB_USERNAME");
