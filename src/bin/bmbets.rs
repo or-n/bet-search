@@ -16,12 +16,12 @@ async fn goto(
     event: db::EventWithOdd,
 ) -> Result<(), CmdError> {
     let e = event.without_odd();
-    let event_tab = football::tab(e).unwrap();
+    let event_tabs = football::tab(e);
     menu::dropdown(client).await?;
     let tab_links = menu::tab_links(client).await?;
     for (name, button) in tab_links {
         if let Ok(("", tab)) = football::Tab::eat(name.as_str(), ()) {
-            if tab == event_tab {
+            if event_tabs.contains(&tab) {
                 println!("{:?}", tab);
                 button.click().await?;
             }

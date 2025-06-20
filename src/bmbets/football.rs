@@ -21,16 +21,17 @@ pub enum Tab {
     Penalty,
 }
 
-pub fn tab(event: db::Event) -> Option<Tab> {
+pub fn tab(event: db::Event) -> Vec<Tab> {
+    use Tab::*;
     match event.tag {
         db::Football::GoalD => match (event.a, event.b) {
-            (Some(0.5), None) => Some(Tab::Winner),
-            (Some(-0.5), None) => Some(Tab::DoubleChance),
-            (None, Some(-0.5)) => Some(Tab::Winner),
-            (None, Some(0.5)) => Some(Tab::DoubleChance),
-            (Some(-0.5), Some(0.5)) => Some(Tab::Winner),
-            (Some(0.5), Some(-0.5)) => Some(Tab::DoubleChance),
-            _ => None,
+            (Some(0.5), None) => vec![Winner, AsianHandicap],
+            (Some(-0.5), None) => vec![DoubleChance, AsianHandicap],
+            (None, Some(-0.5)) => vec![Winner, AsianHandicap],
+            (None, Some(0.5)) => vec![DoubleChance, AsianHandicap],
+            (Some(-0.5), Some(0.5)) => vec![Winner],
+            (Some(0.5), Some(-0.5)) => vec![DoubleChance],
+            _ => vec![],
         },
     }
 }
