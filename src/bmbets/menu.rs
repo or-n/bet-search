@@ -31,10 +31,7 @@ pub async fn toolbar(client: &mut Client) -> Result<Element, CmdError> {
     Err(CmdError::Standard(webdriver))
 }
 
-pub async fn tab_links(
-    client: &mut Client,
-) -> Result<Vec<(String, Element)>, CmdError> {
-    let list = client.wait().for_element(Css(TAB)).await?;
+async fn links(list: Element) -> Result<Vec<(String, Element)>, CmdError> {
     let links = list.find_all(Css("a")).await?;
     Ok(join_all(links.into_iter().map(|link| async move {
         let name = link.html(true).await.unwrap_or_else(|_| "".to_string());
@@ -42,6 +39,21 @@ pub async fn tab_links(
     }))
     .await)
 }
+
+pub async fn tab_links(
+    client: &mut Client,
+) -> Result<Vec<(String, Element)>, CmdError> {
+    let list = client.wait().for_element(Css(TAB)).await?;
+    links(list).await
+}
+
+pub async fn toolbar_links(
+    client: &mut Client,
+) -> Result<Vec<(String, Element)>, CmdError> {
+    let list = toolbar(client).await?;
+    links(list).await
+}
+
 pub async fn odds_content(client: &mut Client) -> Result<Element, CmdError> {
     client.find(Css("#oddsContent")).await
 }

@@ -11,21 +11,49 @@ use serde_json::{json, Map};
 use std::time::Instant;
 use tokio::time;
 
+fn eat_and_find<Id, T>(x_to_find: Id, xs: Vec<(String, T)>) -> Option<(Id, T)>
+where
+    Id: for<'a> Eat<&'a str, (), ()> + PartialEq,
+{
+    xs.into_iter().find_map(|(i, value)| {
+        let (remains, x) = Id::eat(&i, ()).ok()?;
+        if !remains.is_empty() || x != x_to_find {
+            return None;
+        }
+        Some((x, value))
+    })
+}
+
 async fn goto(
     client: &mut Client,
     event: db::EventWithOdd,
 ) -> Result<(), CmdError> {
     let e = event.without_odd();
-    let event_tabs = football::tab(e);
-    menu::dropdown(client).await?;
-    let tab_links = menu::tab_links(client).await?;
-    for (name, button) in tab_links {
-        if let Ok(("", tab)) = football::Tab::eat(name.as_str(), ()) {
-            if event_tabs.contains(&tab) {
-                println!("{:?}", tab);
-                button.click().await?;
+    let event_tabs = football::tab(e.clone());
+    for event_tab in event_tabs {
+        let (tab, button) = {
+            menu::dropdown(client).await?;
+            let links = menu::tab_links(client).await?;
+            match eat_and_find(event_tab, links) {
+                Some(x) => x,
+                _ => continue,
             }
-        }
+        };
+        println!("{:?}", tab);
+        button.click().await?;
+        let (toolbar, button) = {
+            let event_toolbar = match football::toolbar(e.clone()) {
+                Some(x) => x,
+                _ => continue,
+            };
+            let links = menu::toolbar_links(client).await?;
+            match eat_and_find(event_toolbar, links) {
+                Some(x) => x,
+                _ => continue,
+            }
+        };
+        println!("{:?}", toolbar);
+        button.click().await?;
     }
     Ok(())
 }

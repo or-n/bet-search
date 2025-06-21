@@ -90,7 +90,7 @@ async fn main() {
     let start = Instant::now();
     dotenv().ok();
     let db = db::connect().await;
-    let odds_range = [prematch_odds_min(), prematch_odds_max()];
+    let odds_range = [db::prematch_odds_min(), db::prematch_odds_max()];
     let match_urls = {
         let match_ids: Vec<_> = {
             let now = Utc::now();

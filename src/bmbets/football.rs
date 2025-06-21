@@ -21,6 +21,13 @@ pub enum Tab {
     Penalty,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Toolbar {
+    FT,
+    H1,
+    H2,
+}
+
 pub fn tab(event: db::Event) -> Vec<Tab> {
     use Tab::*;
     match event.tag {
@@ -32,6 +39,16 @@ pub fn tab(event: db::Event) -> Vec<Tab> {
             (Some(-0.5), Some(0.5)) => vec![Winner],
             (Some(0.5), Some(-0.5)) => vec![DoubleChance],
             _ => vec![],
+        },
+    }
+}
+
+pub fn toolbar(event: db::Event) -> Option<Toolbar> {
+    use Toolbar::*;
+    match event.tag {
+        db::Football::GoalD => match (event.ta, event.tb) {
+            (None, None) => Some(FT),
+            _ => None,
         },
     }
 }
@@ -59,6 +76,16 @@ impl Eat<&str, (), ()> for Tab {
         eat!(i, "Draw No Bet", DrawNoBet);
         eat!(i, "Exact Goals Number", ExactGoalsNumber);
         eat!(i, "Penalty", Penalty);
+        Err(())
+    }
+}
+
+impl Eat<&str, (), ()> for Toolbar {
+    fn eat(i: &str, _data: ()) -> Result<(&str, Self), ()> {
+        use Toolbar::*;
+        eat!(i, "Full Time", FT);
+        eat!(i, "1st Half", H1);
+        eat!(i, "2nd Half", H2);
         Err(())
     }
 }
