@@ -1,6 +1,6 @@
 use fantoccini::{
     elements::Element,
-    error::{CmdError, ErrorStatus, WebDriver},
+    error::CmdError,
     Client,
     Locator::{Css, XPath},
 };
@@ -17,18 +17,6 @@ pub async fn dropdown(client: &mut Client) -> Result<(), CmdError> {
         dropdown.click().await?;
     }
     Ok(())
-}
-
-pub async fn toolbar(client: &mut Client) -> Result<Element, CmdError> {
-    let toolbar = client.wait().for_element(Css(TOOLBAR)).await?;
-    let divs = toolbar.find_all(Css("div")).await?;
-    for div in divs {
-        if div.is_displayed().await? {
-            return Ok(div);
-        }
-    }
-    let webdriver = WebDriver::new(ErrorStatus::NoSuchElement, "toolbar div");
-    Err(CmdError::Standard(webdriver))
 }
 
 async fn links(list: Element) -> Result<Vec<(String, Element)>, CmdError> {
@@ -50,17 +38,15 @@ pub async fn tab_links(
 pub async fn toolbar_links(
     client: &mut Client,
 ) -> Result<Vec<(String, Element)>, CmdError> {
-    let list = toolbar(client).await?;
+    let toolbar = client.wait().for_element(Css(TOOLBAR)).await?;
+    let list = toolbar.find(Css("ul")).await?;
     links(list).await
 }
 
-pub async fn odds_content(client: &mut Client) -> Result<Element, CmdError> {
-    client.find(Css("#oddsContent")).await
-}
-
-pub async fn odds_divs(
-    content: Element,
+pub async fn variants(
+    client: &mut Client,
 ) -> Result<Vec<(String, Element)>, CmdError> {
+    let content = client.find(Css("#oddsContent")).await?;
     sleep(Duration::from_millis(2000)).await;
     let divs = content.find_all(Css("div.caption")).await?;
     let divs = join_all(divs.into_iter().map(|div| async move {

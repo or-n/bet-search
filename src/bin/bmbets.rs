@@ -16,8 +16,14 @@ where
     Id: for<'a> Eat<&'a str, (), ()> + PartialEq,
 {
     xs.into_iter().find_map(|(i, value)| {
-        let (remains, x) = Id::eat(&i, ()).ok()?;
-        if !remains.is_empty() || x != x_to_find {
+        let (remains, x) = match Id::eat(&i, ()).ok() {
+            Some(x) => x,
+            _ => panic!("{:?}", i),
+        };
+        if !remains.is_empty() {
+            panic!()
+        }
+        if x != x_to_find {
             return None;
         }
         Some((x, value))
@@ -39,9 +45,8 @@ async fn goto(
                 _ => continue,
             }
         };
-        println!("{:?}", tab);
         button.click().await?;
-        let (toolbar, button) = {
+        let (_toolbar, button) = {
             let event_toolbar = match football::toolbar(e.clone()) {
                 Some(x) => x,
                 _ => continue,
@@ -52,8 +57,22 @@ async fn goto(
                 _ => continue,
             }
         };
-        println!("{:?}", toolbar);
         button.click().await?;
+        let (variant, _element) = {
+            let event_variant = match football::variant(e.clone(), tab.clone())
+                .into_iter()
+                .next()
+            {
+                Some(x) => x,
+                _ => continue,
+            };
+            let links = menu::variants(client).await?;
+            match eat_and_find(event_variant, links) {
+                Some(x) => x,
+                _ => continue,
+            }
+        };
+        println!("{:?}", variant);
     }
     Ok(())
 }
@@ -110,7 +129,7 @@ async fn main() {
                 db::events_match_odd(&db, m.id, db::Book::Fortuna, odds_range);
             events.await.unwrap_or_else(|error| {
                 println!("{:?}", error);
-                vec![]
+                panic!()
             })
         };
         for event in events {

@@ -28,6 +28,11 @@ pub enum Toolbar {
     H2,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum Variant {
+    Handicap(f64),
+}
+
 pub fn tab(event: db::Event) -> Vec<Tab> {
     use Tab::*;
     match event.tag {
@@ -49,6 +54,20 @@ pub fn toolbar(event: db::Event) -> Option<Toolbar> {
         db::Football::GoalD => match (event.ta, event.tb) {
             (None, None) => Some(FT),
             _ => None,
+        },
+    }
+}
+
+pub fn variant(event: db::Event, tab: Tab) -> Vec<Variant> {
+    use Tab::*;
+    use Variant::*;
+    match event.tag {
+        db::Football::GoalD => match (event.a, event.b, tab) {
+            (Some(0.5), None, AsianHandicap) => vec![Handicap(0.5)],
+            (Some(-0.5), None, AsianHandicap) => vec![Handicap(-0.5)],
+            (None, Some(-0.5), AsianHandicap) => vec![Handicap(-0.5)],
+            (None, Some(0.5), AsianHandicap) => vec![Handicap(0.5)],
+            _ => vec![],
         },
     }
 }
@@ -90,26 +109,13 @@ impl Eat<&str, (), ()> for Toolbar {
     }
 }
 
-#[allow(dead_code)]
-#[derive(Debug)]
-enum Variant {
-    Handicap(String, OverUnder),
-    Total(String, OverUnder),
-    Unknown(String),
-}
-
-#[allow(dead_code)]
-#[derive(Debug)]
-enum OverUnder {
-    Over,
-    Under,
-}
-
-pub fn pos_line(x: &String) -> String {
-    let trim = x.trim();
-    if trim.chars().next() == Some('-') {
-        trim.to_string()
-    } else {
-        format!("+{}", trim)
+impl Eat<&str, (), ()> for Variant {
+    fn eat(i: &str, _data: ()) -> Result<(&str, Self), ()> {
+        use Variant::*;
+        if let Ok(i) = "Handicap ".drop(i) {
+            let (i, value) = f64::eat(i, ())?;
+            return Ok((i, Handicap(value)));
+        }
+        Err(())
     }
 }
