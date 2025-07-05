@@ -42,8 +42,13 @@ impl Name for Page {
 }
 
 pub struct Subpage {
-    pub urls: Vec<String>,
+    pub matches: Vec<Match>,
     pub tournament: String,
+}
+
+pub struct Match {
+    pub url: String,
+    pub sets: Vec<(usize, usize)>,
 }
 
 impl Subpages<Subpage> for Tag<Page, Html> {
@@ -52,20 +57,41 @@ impl Subpages<Subpage> for Tag<Page, Html> {
         let tournament =
             Selector::parse(".match-tile-region-info__text").unwrap();
         let subpage = Selector::parse("bb-live-match-tile a").unwrap();
+        let sets =
+            Selector::parse(".live-match-tile-scoreboard-score__partials")
+                .unwrap();
+        let set_scores = Selector::parse("div").unwrap();
         self.inner()
             .select(&event)
             .filter_map(|element| {
-                let urls: Vec<String> = element
+                let matches: Vec<Match> = element
                     .select(&subpage)
                     .filter_map(|e| {
-                        e.value().attr("href").map(|s| s.to_string())
+                        let url = e.value().attr("href")?.to_string();
+                        let sets: Vec<(usize, usize)> = e
+                            .select(&sets)
+                            .filter_map(|e| {
+                                let mut iter = e.select(&set_scores);
+                                let a = iter.next()?;
+                                let b = iter.next()?;
+                                let a_value = clean_text(a.text());
+                                let b_value = clean_text(b.text());
+                                let a_value = a_value.parse::<usize>().ok()?;
+                                let b_value = b_value.parse::<usize>().ok()?;
+                                Some((a_value, b_value))
+                            })
+                            .collect();
+                        Some(Match { url, sets })
                     })
                     .collect();
                 let tournament = element
                     .select(&tournament)
                     .next()
                     .map(|x| clean_text(x.text()))?;
-                let page = Subpage { urls, tournament };
+                let page = Subpage {
+                    matches,
+                    tournament,
+                };
                 Some(page)
             })
             .collect()
