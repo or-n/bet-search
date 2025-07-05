@@ -7,9 +7,6 @@ use fantoccini::{
 use futures::future::join_all;
 use tokio::time::{sleep, Duration};
 
-pub const TAB: &str = ".list";
-pub const TOOLBAR: &str = ".ui-toolbar";
-
 pub async fn dropdown(client: &mut Client) -> Result<(), CmdError> {
     let dropdown = client.wait().for_element(Css("#elmTabUl")).await?;
     let expanded = dropdown.attr("expanded").await?;
@@ -31,14 +28,14 @@ async fn links(list: Element) -> Result<Vec<(String, Element)>, CmdError> {
 pub async fn tab_links(
     client: &mut Client,
 ) -> Result<Vec<(String, Element)>, CmdError> {
-    let list = client.wait().for_element(Css(TAB)).await?;
+    let list = client.wait().for_element(Css(".list")).await?;
     links(list).await
 }
 
 pub async fn toolbar_links(
     client: &mut Client,
 ) -> Result<Vec<(String, Element)>, CmdError> {
-    let toolbar = client.wait().for_element(Css(TOOLBAR)).await?;
+    let toolbar = client.wait().for_element(Css(".ui-toolbar")).await?;
     let list = toolbar.find(Css("ul")).await?;
     links(list).await
 }

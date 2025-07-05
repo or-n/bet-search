@@ -17,7 +17,9 @@ async fn main() {
     client.close().await.unwrap();
     let subpages = html.document().subpages();
     for subpage in subpages {
-        println!("{} {}", subpage.url, subpage.tournament);
+        for url in subpage.urls {
+            println!("{} {}", url, subpage.tournament);
+        }
     }
     println!("Elapsed time: {:.2?}", start.elapsed());
 }

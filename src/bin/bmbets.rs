@@ -11,17 +11,21 @@ use serde_json::{json, Map};
 use std::time::Instant;
 use tokio::time;
 
-fn eat_and_find<Id, T>(x_to_find: Id, xs: Vec<(String, T)>) -> Option<(Id, T)>
+fn eat_and_find<Id, T>(
+    label: &str,
+    x_to_find: Id,
+    xs: Vec<(String, T)>,
+) -> Option<(Id, T)>
 where
     Id: for<'a> Eat<&'a str, (), ()> + PartialEq,
 {
     xs.into_iter().find_map(|(i, value)| {
         let (remains, x) = match Id::eat(&i, ()).ok() {
             Some(x) => x,
-            _ => panic!("{:?}", i),
+            _ => panic!("{}: {:?}", label, i),
         };
         if !remains.is_empty() {
-            panic!()
+            panic!("{}", label)
         }
         if x != x_to_find {
             return None;
@@ -40,39 +44,50 @@ async fn goto(
         let (tab, button) = {
             menu::dropdown(client).await?;
             let links = menu::tab_links(client).await?;
-            match eat_and_find(event_tab, links) {
+            match eat_and_find("tab", event_tab, links) {
                 Some(x) => x,
                 _ => continue,
             }
         };
         button.click().await?;
-        let (_toolbar, button) = {
+        if tab != football::Tab::Winner {
+            time::sleep(time::Duration::from_secs(2)).await;
+        }
+        let (toolbar, button) = {
             let event_toolbar = match football::toolbar(e.clone()) {
                 Some(x) => x,
                 _ => continue,
             };
             let links = menu::toolbar_links(client).await?;
-            match eat_and_find(event_toolbar, links) {
+            match eat_and_find("toolbar", event_toolbar, links) {
                 Some(x) => x,
                 _ => continue,
             }
         };
+        println!("{:?} {:?}", tab, toolbar);
         button.click().await?;
-        let (variant, _element) = {
+        time::sleep(time::Duration::from_secs(2)).await;
+        let (variant, button) = {
             let event_variant = match football::variant(e.clone(), tab.clone())
                 .into_iter()
                 .next()
             {
                 Some(x) => x,
-                _ => continue,
+                _ => {
+                    println!("no variant for: {:?} {:?}", e, tab);
+                    continue;
+                }
             };
+            println!("should be: {:?}", event_variant);
             let links = menu::variants(client).await?;
-            match eat_and_find(event_variant, links) {
+            match eat_and_find("variant", event_variant, links) {
                 Some(x) => x,
                 _ => continue,
             }
         };
         println!("{:?}", variant);
+        button.click().await?;
+        time::sleep(time::Duration::from_secs(2)).await;
     }
     Ok(())
 }

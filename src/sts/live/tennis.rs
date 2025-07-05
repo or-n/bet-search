@@ -1,7 +1,7 @@
 use crate::shared::book;
 use crate::utils::{browser, download::Download, page, scrape};
 use book::Subpages;
-use fantoccini::{error::CmdError, Client, Locator};
+use fantoccini::{error::CmdError, Client};
 use page::{Name, Tag, Url};
 use scrape::clean_text;
 use scraper::{Html, Selector};
@@ -25,36 +25,6 @@ impl Download<Client, Page> for Tag<Page, String> {
         client.goto(url.as_str()).await?;
         sleep(Duration::from_secs(1)).await;
         browser::try_accepting_cookie(client, COOKIE_ACCEPT).await?;
-        let mut previous_count = 0;
-        let mut new_count;
-        let scroll = r#"
-            let el = document.querySelector('.live-matchtiles-wrapper');
-            if (!el) return "no .live-matchtiles-wrapper";
-            let event = new MouseEvent('wheel', {
-                deltaY: 1000,
-                bubbles: true,
-                cancelable: true,
-                view: window,
-            });
-
-            el.dispatchEvent(event);
-            return "scrolled";
-        "#;
-        loop {
-            let elements =
-                client.find_all(Locator::Css("bb-live-league")).await?;
-            new_count = elements.len();
-            if new_count == previous_count {
-                println!("nothing new");
-                break;
-            }
-            println!("found: {}", new_count);
-            previous_count = new_count;
-            let r = client.execute(scroll, vec![]).await?;
-            println!("scroll result: {:?}", r);
-            sleep(Duration::from_secs(2)).await;
-        }
-        sleep(Duration::from_secs(4)).await;
         client.source().await.map(Tag::new)
     }
 }
@@ -72,7 +42,7 @@ impl Name for Page {
 }
 
 pub struct Subpage {
-    pub url: String,
+    pub urls: Vec<String>,
     pub tournament: String,
 }
 
@@ -85,16 +55,17 @@ impl Subpages<Subpage> for Tag<Page, Html> {
         self.inner()
             .select(&event)
             .filter_map(|element| {
-                let url = element
+                let urls: Vec<String> = element
                     .select(&subpage)
-                    .filter_map(|element| element.value().attr("href"))
-                    .next()
-                    .map(|href| href.to_string())?;
+                    .filter_map(|e| {
+                        e.value().attr("href").map(|s| s.to_string())
+                    })
+                    .collect();
                 let tournament = element
                     .select(&tournament)
                     .next()
                     .map(|x| clean_text(x.text()))?;
-                let page = Subpage { url, tournament };
+                let page = Subpage { urls, tournament };
                 Some(page)
             })
             .collect()

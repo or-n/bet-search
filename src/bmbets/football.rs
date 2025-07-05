@@ -14,11 +14,13 @@ pub enum Tab {
     DoubleChance,
     Cards,
     IndividualTotalGoals,
+    IndividualOddEven,
     IndividualCorners,
     BothTeamsToScore,
     DrawNoBet,
     ExactGoalsNumber,
     Penalty,
+    OddEven,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -90,11 +92,13 @@ impl Eat<&str, (), ()> for Tab {
         eat!(i, "Double Chance", DoubleChance);
         eat!(i, "Cards", Cards);
         eat!(i, "Individual Total Goals", IndividualTotalGoals);
+        eat!(i, "Individual Odd/Even", IndividualOddEven);
         eat!(i, "Individual Corners", IndividualCorners);
         eat!(i, "Both Teams To Score", BothTeamsToScore);
         eat!(i, "Draw No Bet", DrawNoBet);
         eat!(i, "Exact Goals Number", ExactGoalsNumber);
         eat!(i, "Penalty", Penalty);
+        eat!(i, "Odd/Even", OddEven);
         Err(())
     }
 }
