@@ -9,11 +9,11 @@ use crate::utils::{
     scrape::clean_text,
 };
 use eat::*;
-use fantoccini::{error::CmdError, Client, Locator};
+use fantoccini::{error::CmdError, Client};
 use scraper::{Html, Selector};
 use tokio::time::{sleep, Duration};
 
-const URL: &str = "/zaklady-bukmacherskie/pilka-nozna";
+const URL: &str = "/zaklady-bukmacherskie/pika-nozna";
 
 #[derive(Debug, Clone)]
 pub enum Url {
@@ -53,52 +53,59 @@ impl Download<Client, Page> for Tag<Page, String> {
         let url = format!("{}{}", super::URL, URL);
         client.goto(url.as_str()).await?;
         browser::try_accepting_cookie(client, COOKIE_ACCEPT).await?;
-        let mut previous_count = 0;
-        let mut new_count;
-        let scroll = "window.scrollTo(0, document.body.scrollHeight);";
-        loop {
-            let elements = client.find_all(Locator::Css(".event-link")).await?;
-            new_count = elements.len();
-            if new_count == previous_count {
-                println!("nothing new");
-                break;
-            }
-            println!("found: {}", new_count);
-            previous_count = new_count;
-            client.execute(scroll, vec![]).await?;
-            sleep(Duration::from_secs(2)).await;
-        }
+        sleep(Duration::from_secs(2)).await;
         client.source().await.map(Tag::new)
     }
 }
 
 impl Tag<Page, Html> {
-    pub fn matches(&self) -> Vec<Match> {
-        let event = Selector::parse("table.events-table tr").unwrap();
-        let title = Selector::parse("td.col-title").unwrap();
-        let subpage = Selector::parse("a.event-link").unwrap();
-        let date = Selector::parse("span.event-datetime").unwrap();
+    pub fn match_groups(&self) -> Vec<(String, Vec<Match>)> {
+        let group = Selector::parse(".card-group").unwrap();
+        let group_header = Selector::parse(".offer-card-group-header").unwrap();
+        let group_name = Selector::parse("a").unwrap();
+        let matches = Selector::parse("article").unwrap();
+        let football_match = Selector::parse("a").unwrap();
+        let time = Selector::parse("time").unwrap();
+        let player =
+            Selector::parse(".fixture-card__participant-name").unwrap();
         self.inner()
-            .select(&event)
-            .filter_map(|element| {
-                let title = element.select(&title).next()?;
-                let url = title
-                    .select(&subpage)
-                    .filter_map(|element| element.value().attr("href"))
-                    .next()
-                    .map(|href| href.to_string())?;
-                let players = title.value().attr("data-value").unwrap();
-                let (before, after) = players.split_once(" - ")?;
-                let before = before.trim().to_string();
-                let after = after.trim().to_string();
-                let players = [before, after];
-                let datetime = element
-                    .select(&date)
-                    .next()
-                    .map(|a| clean_text(a.text()))?;
-                let date = date::eat_assume_year(&datetime).unwrap();
-                let m = Match { players, date, url };
-                Some(m)
+            .select(&group)
+            .filter_map(|group_item| {
+                let group_name = {
+                    let group_header_item =
+                        group_item.select(&group_header).next()?;
+                    let group_name_item =
+                        group_header_item.select(&group_name).next()?;
+                    clean_text(group_name_item.text())
+                };
+                let matches_item = group_item.select(&matches).next()?;
+                // todo: click to load group matches if they are collapsed
+                let matches = matches_item.select(&football_match).filter_map(
+                    |football_match_item| {
+                        let date = {
+                            let time =
+                                football_match_item.select(&time).next()?;
+                            let time = clean_text(time.text());
+                            date::eat_fortuna(&time)?
+                        };
+                        let url = football_match_item
+                            .value()
+                            .attr("href")?
+                            .to_string();
+                        let players = {
+                            let players = football_match_item
+                                .select(&player)
+                                .map(|player_item| {
+                                    clean_text(player_item.text())
+                                });
+                            let players: Vec<_> = players.collect();
+                            players.try_into().unwrap()
+                        };
+                        Some(Match { url, date, players })
+                    },
+                );
+                let matches: Vec<_> = matches.collect();
+                Some((group_name, matches))
             })
             .collect()
     }

@@ -14,6 +14,22 @@ pub fn eat_assume_year(i: &str) -> Option<NaiveDateTime> {
     Some(date2)
 }
 
+pub fn eat_fortuna(i: &str) -> Option<NaiveDateTime> {
+    let now = Local::now().naive_local();
+    if let Some(i) = i.strip_prefix("dzisiaj ") {
+        return eat(&format!("{} {}", now.date(), i));
+    }
+    if let Some(i) = i.strip_prefix("jutro ") {
+        let tomorrow = now.date().succ_opt()?;
+        return eat(&format!("{} {}", tomorrow, i));
+    }
+    let i = i.trim_start_matches(|c: char| {
+        c.is_alphabetic() || c == '.' || c == ',' || c.is_whitespace()
+    });
+    let format = "%e.%m.%Y, %H:%M";
+    NaiveDateTime::parse_from_str(i, format).ok()
+}
+
 pub fn eat(i: &str) -> Option<NaiveDateTime> {
     let format = "%Y-%m-%d %H:%M";
     NaiveDateTime::parse_from_str(i, format).ok()

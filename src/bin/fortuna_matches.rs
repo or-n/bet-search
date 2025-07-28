@@ -18,10 +18,12 @@ async fn main() {
         .connect(&browser::localhost(4444))
         .await
         .unwrap();
-    let matches = {
+    let matches: Vec<_> = {
         let page = fortuna::prematch::football::Page;
         let html = Tag::download(&mut client, page).await.unwrap();
-        html.document().matches()
+        let groups = html.document().match_groups();
+        let matches = groups.into_iter().flat_map(|(_a, vec_b)| vec_b);
+        matches.collect()
     };
     for m in &matches {
         let id = m.db_id();
