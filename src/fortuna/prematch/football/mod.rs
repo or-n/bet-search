@@ -9,8 +9,9 @@ use crate::utils::{
     scrape::clean_text,
 };
 use eat::*;
-use fantoccini::{error::CmdError, Client};
+use fantoccini::{error::CmdError, Client, Locator};
 use scraper::{Html, Selector};
+use serde_json::json;
 use tokio::time::{sleep, Duration};
 
 const URL: &str = "/zaklady-bukmacherskie/pika-nozna";
@@ -53,7 +54,17 @@ impl Download<Client, Page> for Tag<Page, String> {
         let url = format!("{}{}", super::URL, URL);
         client.goto(url.as_str()).await?;
         browser::try_accepting_cookie(client, COOKIE_ACCEPT).await?;
-        sleep(Duration::from_secs(2)).await;
+        sleep(Duration::from_secs(6)).await;
+        let groups = client.find_all(Locator::Css(".card-group")).await?;
+        let scroll =
+            "arguments[0].scrollIntoView({behavior: 'auto', block: 'center'});";
+        for group in groups {
+            let has_article = group.find(Locator::Css("article")).await.is_ok();
+            if !has_article {
+                client.execute(scroll, vec![json!(group)]).await?;
+                group.click().await?;
+            }
+        }
         client.source().await.map(Tag::new)
     }
 }
@@ -79,7 +90,6 @@ impl Tag<Page, Html> {
                     clean_text(group_name_item.text())
                 };
                 let matches_item = group_item.select(&matches).next()?;
-                // todo: click to load group matches if they are collapsed
                 let matches = matches_item.select(&football_match).filter_map(
                     |football_match_item| {
                         let date = {
