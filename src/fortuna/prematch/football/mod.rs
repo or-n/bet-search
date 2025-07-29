@@ -12,9 +12,8 @@ use eat::*;
 use fantoccini::{error::CmdError, Client, Locator};
 use scraper::{Html, Selector};
 use serde_json::json;
-use tokio::time::{sleep, Duration};
 
-const URL: &str = "/zaklady-bukmacherskie/pika-nozna";
+pub const URL: &str = "/zaklady-bukmacherskie/pika-nozna";
 
 #[derive(Debug, Clone)]
 pub enum Url {
@@ -54,7 +53,10 @@ impl Download<Client, Page> for Tag<Page, String> {
         let url = format!("{}{}", super::URL, URL);
         client.goto(url.as_str()).await?;
         browser::try_accepting_cookie(client, COOKIE_ACCEPT).await?;
-        sleep(Duration::from_secs(6)).await;
+        let _ = client
+            .wait()
+            .for_element(Locator::Css(".card-group"))
+            .await?;
         let groups = client.find_all(Locator::Css(".card-group")).await?;
         let scroll =
             "arguments[0].scrollIntoView({behavior: 'auto', block: 'center'});";

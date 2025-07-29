@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
 use dotenv::dotenv;
-use fantoccini::ClientBuilder;
+use fantoccini::{error::CmdError, ClientBuilder};
 use odds::{
     fortuna::{
         self,
@@ -44,6 +44,15 @@ async fn main() {
     let start = Instant::now();
     let mut download_count = 0;
     let save_count = 0;
+    let url = format!(
+        "{}{}",
+        fortuna::prematch::URL,
+        fortuna::prematch::football::URL
+    );
+    client.goto(url.as_str()).await.unwrap();
+    browser::try_accepting_cookie(&mut client, fortuna::COOKIE_ACCEPT)
+        .await
+        .unwrap();
     while let Some(match_url) = queue.lock().await.pop() {
         let m = match_url.m;
         let url = match_url.url;
@@ -51,11 +60,15 @@ async fn main() {
         let events = {
             let subpage =
                 fortuna::prematch::football::subpage::Page(url.clone());
-            let html =
-                Tag::download(&mut client, subpage.clone()).await.unwrap();
+            let result = Tag::download(&mut client, subpage.clone()).await;
             download_count += 1;
-            html.document().events()
+            match result {
+                Err(CmdError::WaitTimeout) => vec![],
+                Ok(html) => html.document().events(),
+                Err(error) => panic!("{}", error),
+            }
         };
+        println!("{:?}", events);
         let download_record = {
             let download: Result<Option<db::Record>, Error> = db
                 .create("download")

@@ -17,16 +17,6 @@ pub const ENTER: &str = "\u{E007}";
 pub const _TAB: &str = "\u{E004}";
 pub const _ESC: &str = "\u{E00C}";
 
-// #[derive(Debug)]
-// pub enum Error {
-//     Spawn(std::io::Error),
-//     NewSession {
-//         port: u16,
-//         error: fantoccini::error::NewSessionError,
-//     },
-//     Cmd(fantoccini::error::CmdError),
-// }
-
 // pub fn spawn(port: u16) -> std::io::Result<Child> {
 //     Command::new("geckodriver")
 //         .arg("--port")
@@ -47,7 +37,7 @@ pub async fn try_accepting_cookie(
             accept?.click().await?;
             Ok(true)
         }
-        _ = sleep(Duration::from_millis(2000)) => {
+        _ = sleep(Duration::from_millis(4000)) => {
             Ok(false)
         }
     }
