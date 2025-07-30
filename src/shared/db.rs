@@ -92,7 +92,7 @@ pub async fn events_match_odd(
     m: RecordId,
     book: Book,
     range: [f64; 2],
-) -> Result<Vec<EventWithOdd>, Error> {
+) -> Result<Vec<EventWithOddAndDownload>, Error> {
     db.query(
         "SELECT
             out.tag as tag,
@@ -100,12 +100,13 @@ pub async fn events_match_odd(
             out.time_max as time_max,
             out.min as min,
             out.max as max,
-            odd
+            odd,
+            download
         FROM offers
         WHERE in = $book
         AND odd IN $min..=$max
         AND out.match = $match
-        FETCH out;",
+        FETCH out, download;",
     )
     .bind(("book", book))
     .bind(("min", range[0]))
@@ -221,8 +222,23 @@ pub struct EventWithOdd {
     pub odd: f64,
 }
 
-impl EventWithOdd {
-    pub fn without_odd(self) -> Event {
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EventWithOddAndDownload {
+    pub tag: Football,
+    #[serde(rename = "time_min")]
+    pub ta: Option<f64>,
+    #[serde(rename = "time_max")]
+    pub tb: Option<f64>,
+    #[serde(rename = "min")]
+    pub a: Option<f64>,
+    #[serde(rename = "max")]
+    pub b: Option<f64>,
+    pub odd: f64,
+    pub download: Download,
+}
+
+impl EventWithOddAndDownload {
+    pub fn without_odd_and_download(self) -> Event {
         Event {
             tag: self.tag,
             ta: self.ta,
@@ -295,13 +311,13 @@ pub enum Book {
     Fortuna,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Source {
     Fortuna,
     Bmbets,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Download {
     pub date: Datetime,
     #[serde(rename = "match")]

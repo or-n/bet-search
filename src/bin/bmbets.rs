@@ -35,11 +35,7 @@ where
     })
 }
 
-async fn goto(
-    client: &mut Client,
-    event: db::EventWithOdd,
-) -> Result<(), CmdError> {
-    let e = event.without_odd();
+async fn goto(client: &mut Client, e: db::Event) -> Result<(), CmdError> {
     let event_tabs = football::tab(e.clone());
     for event_tab in event_tabs {
         let (tab, button) = {
@@ -148,9 +144,16 @@ async fn main() {
                 panic!()
             })
         };
+        let latest_download_date =
+            events.iter().map(|e| e.download.date.clone()).max();
+        println!("latest download: {:?}", latest_download_date);
         for event in events {
+            let date = event.download.date.clone();
+            if Some(date) != latest_download_date {
+                continue;
+            }
             println!("{:?}", event);
-            let _ = goto(&mut client, event).await;
+            let _ = goto(&mut client, event.without_odd_and_download()).await;
         }
     }
     client.close().await.unwrap();

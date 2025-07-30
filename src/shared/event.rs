@@ -5,7 +5,7 @@ use std::fmt::Debug;
 #[derive(Debug, Clone)]
 pub struct Event<T1, T2> {
     pub id: T1,
-    pub odds: Vec<(T2, f32)>,
+    pub odds: Vec<(T2, f64)>,
 }
 
 #[derive(Debug)]

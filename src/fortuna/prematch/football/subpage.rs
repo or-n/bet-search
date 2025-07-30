@@ -52,7 +52,7 @@ impl Tag<Page, Html> {
                                 let odd_value_item =
                                     odd_item.select(&odd_value).next()?;
                                 clean_text(odd_value_item.text())
-                                    .parse::<f32>()
+                                    .parse::<f64>()
                                     .ok()?
                             };
                             Some((name, value))
