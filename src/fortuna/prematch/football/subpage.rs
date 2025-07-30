@@ -42,20 +42,20 @@ impl Tag<Page, Html> {
                     };
                     odds_item
                         .select(&odd)
-                        .map(|odd_item| {
+                        .filter_map(|odd_item| {
                             let name = {
                                 let odd_name_item =
-                                    odd_item.select(&odd_name).next().unwrap();
+                                    odd_item.select(&odd_name).next()?;
                                 clean_text(odd_name_item.text())
                             };
                             let value = {
                                 let odd_value_item =
-                                    odd_item.select(&odd_value).next().unwrap();
+                                    odd_item.select(&odd_value).next()?;
                                 clean_text(odd_value_item.text())
                                     .parse::<f32>()
-                                    .unwrap()
+                                    .ok()?
                             };
-                            (name, value)
+                            Some((name, value))
                         })
                         .collect()
                 };

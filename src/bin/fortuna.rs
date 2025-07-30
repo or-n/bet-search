@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
 use dotenv::dotenv;
-use fantoccini::{error::CmdError, ClientBuilder};
+use fantoccini::ClientBuilder;
 use odds::{
     fortuna::{
         self,
@@ -43,7 +43,6 @@ async fn main() {
     let queue = Arc::new(Mutex::new(match_urls));
     let start = Instant::now();
     let mut download_count = 0;
-    let save_count = 0;
     let url = format!(
         "{}{}",
         fortuna::prematch::URL,
@@ -63,9 +62,11 @@ async fn main() {
             let result = Tag::download(&mut client, subpage.clone()).await;
             download_count += 1;
             match result {
-                Err(CmdError::WaitTimeout) => vec![],
                 Ok(html) => html.document().events(),
-                Err(error) => panic!("{}", error),
+                Err(error) => {
+                    println!("{}", error);
+                    vec![]
+                }
             }
         };
         println!("{:?}", events);
@@ -152,6 +153,5 @@ async fn main() {
     println!("Elapsed time: {:.2?}", elapsed);
     println!("Total count: {}", total_count);
     println!("Download count: {}", download_count);
-    println!("Save count: {}", save_count);
     println!("{:.2?} / download", elapsed / download_count as f32);
 }
