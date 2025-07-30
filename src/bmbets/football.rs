@@ -7,6 +7,7 @@ pub enum Tab {
     AsianHandicap,
     EuropeanHandicap,
     Corners,
+    CornersTotalRange,
     TotalsGoals,
     TotalGoalsByIntervals,
     TotalGoalsNumberByRange,
@@ -80,7 +81,10 @@ impl Eat<&str, (), ()> for Tab {
         eat!(i, "1x2", Winner);
         eat!(i, "Asian Handicap", AsianHandicap);
         eat!(i, "European Handicap", EuropeanHandicap);
-        eat!(i, "Corners", Corners);
+        if let Ok(i) = "Corners".drop(i) {
+            eat!(i, ". Total (Range)", CornersTotalRange);
+            return Ok((i, Corners));
+        }
         eat!(i, "Total Goals By Intervals", TotalGoalsByIntervals);
         eat!(i, "Total Goals Number By Range", TotalGoalsNumberByRange);
         eat!(

@@ -8,7 +8,7 @@ use odds::{
     utils::browser,
 };
 use serde_json::{json, Map};
-use std::time::Instant;
+use std::{fmt::Debug, time::Instant};
 use tokio::time;
 
 fn eat_and_find<Id, T>(
@@ -17,7 +17,7 @@ fn eat_and_find<Id, T>(
     xs: Vec<(String, T)>,
 ) -> Option<(Id, T)>
 where
-    Id: for<'a> Eat<&'a str, (), ()> + PartialEq,
+    Id: for<'a> Eat<&'a str, (), ()> + PartialEq + Debug,
 {
     xs.into_iter().find_map(|(i, value)| {
         let (remains, x) = match Id::eat(&i, ()).ok() {
@@ -25,7 +25,8 @@ where
             _ => panic!("{}: {:?}", label, i),
         };
         if !remains.is_empty() {
-            panic!("{}", label)
+            println!("label: {}, out: {:?}, remains: {:?}", label, x, remains);
+            return None;
         }
         if x != x_to_find {
             return None;
