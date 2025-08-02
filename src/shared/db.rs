@@ -46,23 +46,26 @@ pub async fn connect() -> Surreal<Client> {
     db
 }
 
-pub async fn matches_date(
+pub async fn select_match(
     db: &Surreal<Client>,
     date_range: [DateTime<Utc>; 2],
-    source: Source,
+    tournament: Option<String>,
 ) -> Result<Vec<Record>, Error> {
     let date_range: [Datetime; 2] = date_range.map(|x| x.into());
-    db.query(
-        "SELECT in AS id FROM on
-        WHERE out = $source
-        AND in.date IN $date_min>..$date_max;
-    ",
-    )
-    .bind(("source", source))
-    .bind(("date_min", date_range[0].clone()))
-    .bind(("date_max", date_range[1].clone()))
-    .await?
-    .take(0)
+    let mut query: String = "SELECT id FROM match
+        WHERE date IN $date_min>..$date_max"
+        .into();
+    if tournament.is_some() {
+        query.push_str(" AND tournament = $tournament");
+    }
+    let mut query = db
+        .query(query)
+        .bind(("date_min", date_range[0].clone()))
+        .bind(("date_max", date_range[1].clone()));
+    if let Some(t) = tournament {
+        query = query.bind(("tournament", t));
+    }
+    query.await?.take(0)
 }
 
 pub async fn matches_date_odd(

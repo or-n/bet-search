@@ -68,6 +68,27 @@ impl Tag<Page, Html> {
 #[derive(Debug, Clone)]
 pub struct Page(pub String);
 
+async fn get_bet_titles(group: &fantoccini::elements::Element) -> Vec<String> {
+    match group.find_all(Locator::Css("h2")).await {
+        Ok(headings) => {
+            let mut titles = Vec::new();
+            for heading in headings {
+                match heading.text().await {
+                    Ok(text) => titles.push(text),
+                    Err(e) => {
+                        eprintln!("Text error: {:?}", e);
+                    }
+                }
+            }
+            titles
+        }
+        Err(e) => {
+            eprintln!("Find error: {:?}", e);
+            vec![]
+        }
+    }
+}
+
 impl Download<Client, Page> for Tag<Page, String> {
     type Error = CmdError;
 
@@ -75,6 +96,7 @@ impl Download<Client, Page> for Tag<Page, String> {
         client: &Client,
         data: Page,
     ) -> Result<Self, Self::Error> {
+        let mut htmls = vec![];
         client.goto(data.url().as_str()).await?;
         let result = timeout(
             Duration::from_secs(4),
@@ -88,19 +110,43 @@ impl Download<Client, Page> for Tag<Page, String> {
         }
         let groups =
             client.find_all(Locator::Css(".match-detail-card")).await?;
-        let scroll =
-            "arguments[0].scrollIntoView({behavior: 'auto', block: 'center'});";
+        let scroll = r#"
+            const elem = arguments[0];
+            elem.scrollIntoView({behavior: 'auto', block: 'center'});
+            const rect = elem.getBoundingClientRect();
+            const bottomOverlayHeight = 150;
+            if (rect.bottom > (window.innerHeight - bottomOverlayHeight)) {
+                window.scrollBy(0, rect.bottom - (window.innerHeight - bottomOverlayHeight));
+            }
+        "#;
         for group in groups {
+            let titles = get_bet_titles(&group).await;
+            let titles: Vec<_> = titles
+                .into_iter()
+                .filter(|t| !t.trim().is_empty())
+                .collect();
+            if titles.is_empty() {
+                continue;
+            }
+            // println!("{:?}", titles);
             let has_odds = group
                 .find(Locator::Css(".outcomes-container"))
                 .await
                 .is_ok();
             if !has_odds {
-                client.execute(scroll, vec![json!(group)]).await?;
-                group.click().await?;
+                client
+                    .execute(scroll, vec![json!(group)])
+                    .await
+                    .unwrap_or_else(|err| panic!("scroll: {:#?}", err));
+                group
+                    .click()
+                    .await
+                    .unwrap_or_else(|err| panic!("click: {:#?}", err));
             }
+            let html = group.html(false).await;
+            htmls.push(html.unwrap_or_default());
         }
-        client.source().await.map(Tag::new)
+        Ok(htmls.join("")).map(Tag::new)
     }
 }
 

@@ -16,10 +16,9 @@ use tokio::sync::Mutex;
 async fn save_match_odds(
     client: &Client,
     db: &Surreal<ws::Client>,
-    match_url: db::MatchUrl,
+    m: db::MatchWithId,
+    url: String,
 ) {
-    let m = match_url.m;
-    let url = match_url.url;
     println!("{} - {}", m.player1, m.player2);
     let events = {
         let subpage = fortuna::prematch::football::subpage::Page(url.clone());
@@ -27,12 +26,12 @@ async fn save_match_odds(
         match result {
             Ok(html) => html.document().events(),
             Err(error) => {
-                println!("{:#?}", error);
+                println!("download: {:#?}", error);
                 vec![]
             }
         }
     };
-    println!("{:#?}", events);
+    // println!("{:#?}", events);
     let download_record = {
         let download: Result<Option<db::Record>, Error> = db
             .create("download")
@@ -44,7 +43,7 @@ async fn save_match_odds(
             .await;
         match download {
             Ok(option) => option.unwrap(),
-            Err(error) => panic!("{:#?}", error),
+            Err(error) => panic!("download record: {:#?}", error),
         }
     };
     let players = [m.player1, m.player2];
@@ -59,13 +58,13 @@ async fn save_match_odds(
                 _ => continue,
             }
         };
-        println!("{:#?}", football_event);
+        // println!("{:#?}", football_event);
         for (option, odd) in football_event.odds {
             let db_event = match translate_db(football_event.id, option) {
                 Ok(x) => x,
                 Err(()) => continue,
             };
-            println!("{:#?}", db_event);
+            println!("{:?}", db_event);
             let event_record: db::Record = {
                 let match_event = db::MatchEvent {
                     m: m.id.clone(),
@@ -81,7 +80,7 @@ async fn save_match_odds(
                     let create_event: Result<Option<db::Record>, Error> =
                         db.create("real_event").content(match_event).await;
                     let option = create_event.unwrap_or_else(|error| {
-                        panic!("{:?}", error);
+                        panic!("{:#?}", error);
                     });
                     option.unwrap()
                 }
@@ -97,7 +96,7 @@ async fn save_match_odds(
                 .bind(("download", download_record.id.clone()));
             match relate.await {
                 Ok(_) => println!("saved odd {}", odd),
-                Err(error) => println!("{:#?}", error),
+                Err(error) => println!("relate: {:#?}", error),
             }
         }
     }
@@ -109,17 +108,19 @@ async fn save_football_odds(client: &Client, db: &Surreal<ws::Client>) {
         let match_ids = {
             let now = Utc::now();
             let later = now + Duration::hours(db::prematch_hours());
-            let ids = db::matches_date(&db, [now, later], db::Source::Fortuna);
+            let ids = db::select_match(
+                &db,
+                [now, later],
+                Some("Ekstraklasa Polska".into()),
+            );
             let ids = ids.await.unwrap_or_else(|error| {
-                println!("{:#?}", error);
-                panic!()
+                panic!("ids: {:#?}", error);
             });
             ids.into_iter().map(|x| x.id).collect()
         };
         let urls = db::fetch_match_urls(&db, match_ids, db::Source::Fortuna);
         urls.await.unwrap_or_else(|error| {
-            println!("{:#?}", error);
-            panic!()
+            panic!("urls: {:#?}", error);
         })
     };
     println!("Elapsed time: {:.2?}", start.elapsed());
@@ -136,7 +137,7 @@ async fn save_football_odds(client: &Client, db: &Surreal<ws::Client>) {
         .await
         .unwrap();
     while let Some(match_url) = queue.lock().await.pop() {
-        save_match_odds(client, db, match_url).await;
+        save_match_odds(client, db, match_url.m, match_url.url).await;
     }
     let elapsed = start.elapsed().as_secs_f32();
     println!("Total count: {}", total_count);
