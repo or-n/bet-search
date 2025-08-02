@@ -58,11 +58,18 @@ impl Download<Client, Page> for Tag<Page, String> {
             .for_element(Locator::Css(".card-group"))
             .await?;
         let groups = client.find_all(Locator::Css(".card-group")).await?;
-        let scroll =
-            "arguments[0].scrollIntoView({behavior: 'auto', block: 'center'});";
+        let scroll = r#"
+            const elem = arguments[0];
+            elem.scrollIntoView({behavior: 'auto', block: 'center'});
+            const rect = elem.getBoundingClientRect();
+            const bottomOverlayHeight = 150;
+            if (rect.bottom > (window.innerHeight - bottomOverlayHeight)) {
+                window.scrollBy(0, rect.bottom - (window.innerHeight - bottomOverlayHeight));
+            }
+        "#;
         for group in groups {
-            let has_article = group.find(Locator::Css("article")).await.is_ok();
-            if !has_article {
+            let has_matches = group.find(Locator::Css("article")).await.is_ok();
+            if !has_matches {
                 client.execute(scroll, vec![json!(group)]).await?;
                 group.click().await?;
             }
@@ -72,7 +79,7 @@ impl Download<Client, Page> for Tag<Page, String> {
 }
 
 impl Tag<Page, Html> {
-    pub fn match_groups(&self) -> Vec<(String, Vec<Match>)> {
+    pub fn matches(&self) -> Vec<Match> {
         let group = Selector::parse(".card-group").unwrap();
         let group_header = Selector::parse(".offer-card-group-header").unwrap();
         let group_name = Selector::parse("a").unwrap();
@@ -92,8 +99,10 @@ impl Tag<Page, Html> {
                     clean_text(group_name_item.text())
                 };
                 let matches_item = group_item.select(&matches).next()?;
+                let player = player.clone();
+                let time = time.clone();
                 let matches = matches_item.select(&football_match).filter_map(
-                    |football_match_item| {
+                    move |football_match_item| {
                         let date = {
                             let time =
                                 football_match_item.select(&time).next()?;
@@ -113,12 +122,17 @@ impl Tag<Page, Html> {
                             let players: Vec<_> = players.collect();
                             players.try_into().unwrap()
                         };
-                        Some(Match { url, date, players })
+                        Some(Match {
+                            url,
+                            date,
+                            players,
+                            tournament: group_name.clone(),
+                        })
                     },
                 );
-                let matches: Vec<_> = matches.collect();
-                Some((group_name, matches))
+                Some(matches)
             })
+            .flatten()
             .collect()
     }
 }

@@ -269,6 +269,7 @@ pub struct Match {
     pub player1: String,
     pub player2: String,
     pub sport: Sport,
+    pub tournament: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -278,6 +279,7 @@ pub struct MatchWithId {
     pub player1: String,
     pub player2: String,
     pub sport: Sport,
+    pub tournament: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -294,6 +296,7 @@ impl MatchWithId {
             player1: self.player1,
             player2: self.player2,
             sport: self.sport,
+            tournament: self.tournament,
         }
     }
 }

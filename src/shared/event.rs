@@ -13,6 +13,7 @@ pub struct Match {
     pub url: String,
     pub date: chrono::NaiveDateTime,
     pub players: [String; 2],
+    pub tournament: String,
 }
 
 impl Match {

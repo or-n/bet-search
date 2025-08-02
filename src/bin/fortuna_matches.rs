@@ -21,9 +21,7 @@ async fn main() {
     let matches: Vec<_> = {
         let page = fortuna::prematch::football::Page;
         let html = Tag::download(&mut client, page).await.unwrap();
-        let groups = html.document().match_groups();
-        let matches = groups.into_iter().flat_map(|(_a, vec_b)| vec_b);
-        matches.collect()
+        html.document().matches()
     };
     for m in &matches {
         let id = m.db_id();
@@ -34,6 +32,7 @@ async fn main() {
                 player1: m.players[0].clone(),
                 player2: m.players[1].clone(),
                 sport: db::Sport::Football,
+                tournament: m.tournament.clone(),
             })
             .await;
         let relate = db
