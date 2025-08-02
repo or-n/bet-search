@@ -100,7 +100,7 @@ async fn main() {
             let now = Utc::now();
             let later = now + Duration::hours(db::prematch_hours());
             let bmbets =
-                db::matches_date(&db, [now, later], db::Source::Bmbets);
+                db::select_in_match(&db, [now, later], db::Source::Bmbets);
             let ids = bmbets.await.unwrap_or_else(|error| {
                 println!("{:?}", error);
                 panic!()

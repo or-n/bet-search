@@ -3,16 +3,6 @@ use fantoccini::{error::CmdError, Client, Locator};
 use std::time::Duration;
 use tokio::time::sleep;
 
-pub trait Download<T>:
-    super::download::Download<Client, T, Error = CmdError>
-{
-}
-
-impl<T, Data> Download<Data> for T where
-    T: super::download::Download<Client, Data, Error = CmdError>
-{
-}
-
 pub const ENTER: &str = "\u{E007}";
 pub const _TAB: &str = "\u{E004}";
 pub const _ESC: &str = "\u{E00C}";

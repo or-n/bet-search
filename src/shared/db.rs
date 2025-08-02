@@ -68,26 +68,49 @@ pub async fn select_match(
     query.await?.take(0)
 }
 
-pub async fn matches_date_odd(
+pub async fn select_in_match(
+    db: &Surreal<Client>,
+    date_range: [DateTime<Utc>; 2],
+    source: Source,
+) -> Result<Vec<Record>, Error> {
+    let date_range: [Datetime; 2] = date_range.map(|x| x.into());
+    let date_range: [Datetime; 2] = date_range.map(|x| x.into());
+    db.query(
+        "SELECT in AS id FROM on
+        WHERE out = $source
+        AND in.date IN $date_min>..$date_max;
+    ",
+    )
+    .bind(("source", source))
+    .bind(("date_min", date_range[0].clone()))
+    .bind(("date_max", date_range[1].clone()))
+    .await?
+    .take(0)
+}
+
+pub async fn select_offer_match(
     db: &Surreal<Client>,
     date_range: [DateTime<Utc>; 2],
     book: Book,
-    range: [f64; 2],
+    range: Option<[f64; 2]>,
 ) -> Result<Vec<Record>, Error> {
     let date_range: [Datetime; 2] = date_range.map(|x| x.into());
-    db.query(
-        "SELECT download.match as id FROM offers
+    let mut query: String = "SELECT download.match as id FROM offers
         WHERE in = $book
-        AND odd IN $min..=$max
-        AND download.match.date IN $date_min>..$date_max;",
-    )
-    .bind(("book", book))
-    .bind(("date_min", date_range[0].clone()))
-    .bind(("date_max", date_range[1].clone()))
-    .bind(("min", range[0]))
-    .bind(("max", range[1]))
-    .await?
-    .take(0)
+        AND download.match.date IN $date_min>..$date_max "
+        .into();
+    if range.is_some() {
+        query.push_str(" AND odd IN $min..=$max");
+    }
+    let mut query = db
+        .query(query)
+        .bind(("book", book))
+        .bind(("date_min", date_range[0].clone()))
+        .bind(("date_max", date_range[1].clone()));
+    if let Some(range) = range {
+        query = query.bind(("min", range[0])).bind(("max", range[1]));
+    }
+    query.await?.take(0)
 }
 
 pub async fn events_match_odd(

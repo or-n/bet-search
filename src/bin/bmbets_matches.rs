@@ -96,24 +96,22 @@ async fn main() {
             let now = Utc::now();
             let later = now + Duration::hours(db::prematch_hours());
             let set_a: HashSet<_> = {
-                let fortuna = db::matches_date_odd(
+                let fortuna = db::select_offer_match(
                     &db,
                     [now, later],
                     db::Book::Fortuna,
-                    odds_range,
+                    Some(odds_range),
                 );
                 let ids = fortuna.await.unwrap_or_else(|error| {
-                    println!("{:?}", error);
-                    panic!()
+                    panic!("{:?}", error);
                 });
                 ids.into_iter().collect()
             };
             let set_b: HashSet<_> = {
                 let bmbets =
-                    db::matches_date(&db, [now, later], db::Source::Bmbets);
+                    db::select_in_match(&db, [now, later], db::Source::Bmbets);
                 let ids = bmbets.await.unwrap_or_else(|error| {
-                    println!("{:?}", error);
-                    panic!()
+                    panic!("{:?}", error);
                 });
                 ids.into_iter().collect()
             };
@@ -121,8 +119,7 @@ async fn main() {
         };
         let urls = db::fetch_match_urls(&db, match_ids, db::Source::Fortuna);
         urls.await.unwrap_or_else(|error| {
-            println!("{:?}", error);
-            panic!()
+            panic!("{:?}", error);
         })
     };
     println!("matches: {}", match_urls.len());
