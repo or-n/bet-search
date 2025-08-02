@@ -18,7 +18,7 @@ impl Download<Client, Page> for Tag<Page, String> {
     type Error = CmdError;
 
     async fn download(
-        client: &mut Client,
+        client: &Client,
         page: Page,
     ) -> Result<Self, Self::Error> {
         let url = page.url();

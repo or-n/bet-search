@@ -29,7 +29,7 @@ pub fn localhost(port: u16) -> String {
 }
 
 pub async fn try_accepting_cookie(
-    client: &mut Client,
+    client: &Client,
     cookie_accept: &str,
 ) -> Result<bool, CmdError> {
     tokio::select! {

@@ -9,7 +9,7 @@ impl Download<Client, Page> for Tag<Page, String> {
     type Error = CmdError;
 
     async fn download(
-        client: &mut Client,
+        client: &Client,
         _data: Page,
     ) -> Result<Self, Self::Error> {
         client.goto(URL).await?;

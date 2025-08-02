@@ -1,26 +1,18 @@
 use chrono::*;
 use dotenv::dotenv;
-use fantoccini::ClientBuilder;
+use fantoccini::{Client, ClientBuilder};
 use odds::{
     fortuna,
     shared::db,
     utils::{browser, date, download::Download, page::Tag},
 };
 use std::time::Instant;
-use surrealdb::{error::Api, Error};
+use surrealdb::{engine::remote::ws, error::Api, Error, Surreal};
 
-#[tokio::main]
-async fn main() {
-    let start = Instant::now();
-    dotenv().ok();
-    let db = db::connect().await;
-    let mut client = ClientBuilder::native()
-        .connect(&browser::localhost(4444))
-        .await
-        .unwrap();
+async fn save_football_matches(client: &mut Client, db: Surreal<ws::Client>) {
     let matches: Vec<_> = {
         let page = fortuna::prematch::football::Page;
-        let html = Tag::download(&mut client, page).await.unwrap();
+        let html = Tag::download(client, page).await.unwrap();
         html.document().matches()
     };
     for m in &matches {
@@ -58,6 +50,18 @@ async fn main() {
             }
         }
     }
+}
+
+#[tokio::main]
+async fn main() {
+    let start = Instant::now();
+    dotenv().ok();
+    let db = db::connect().await;
+    let mut client = ClientBuilder::native()
+        .connect(&browser::localhost(4444))
+        .await
+        .unwrap();
+    save_football_matches(&mut client, db).await;
     client.close().await.unwrap();
     println!("Elapsed time: {:.2?}", start.elapsed());
 }

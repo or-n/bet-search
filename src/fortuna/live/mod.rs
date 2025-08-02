@@ -13,7 +13,7 @@ impl Download<fantoccini::Client, Page> for Tag<Page, String> {
     type Error = fantoccini::error::CmdError;
 
     async fn download(
-        client: &mut fantoccini::Client,
+        client: &fantoccini::Client,
         _data: Page,
     ) -> Result<Self, Self::Error> {
         client.goto(URL).await?;

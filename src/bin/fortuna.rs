@@ -1,6 +1,6 @@
 use chrono::{Duration, Utc};
 use dotenv::dotenv;
-use fantoccini::ClientBuilder;
+use fantoccini::{Client, ClientBuilder};
 use odds::{
     fortuna::{
         self,
@@ -10,148 +10,147 @@ use odds::{
     utils::{browser, download::Download, page::Tag},
 };
 use std::{sync::Arc, time::Instant};
-use surrealdb::Error;
+use surrealdb::{engine::remote::ws, Error, Surreal};
 use tokio::sync::Mutex;
 
-#[tokio::main]
-async fn main() {
+async fn save_match_odds(
+    client: &Client,
+    db: &Surreal<ws::Client>,
+    match_url: db::MatchUrl,
+) {
+    let m = match_url.m;
+    let url = match_url.url;
+    println!("{} - {}", m.player1, m.player2);
+    let events = {
+        let subpage = fortuna::prematch::football::subpage::Page(url.clone());
+        let result = Tag::download(client, subpage.clone()).await;
+        match result {
+            Ok(html) => html.document().events(),
+            Err(error) => {
+                println!("{:#?}", error);
+                vec![]
+            }
+        }
+    };
+    println!("{:#?}", events);
+    let download_record = {
+        let download: Result<Option<db::Record>, Error> = db
+            .create("download")
+            .content(db::Download {
+                date: Utc::now().into(),
+                m: m.id.clone(),
+                source: db::Source::Fortuna,
+            })
+            .await;
+        match download {
+            Ok(option) => option.unwrap(),
+            Err(error) => panic!("{:#?}", error),
+        }
+    };
+    let players = [m.player1, m.player2];
+    for event in events {
+        let football_event = {
+            let translate = translate_event::<Football, FootballOption>(
+                event.clone(),
+                players.clone(),
+            );
+            match translate {
+                Some(x) => x,
+                _ => continue,
+            }
+        };
+        println!("{:#?}", football_event);
+        for (option, odd) in football_event.odds {
+            let db_event = match translate_db(football_event.id, option) {
+                Ok(x) => x,
+                Err(()) => continue,
+            };
+            println!("{:#?}", db_event);
+            let event_record: db::Record = {
+                let match_event = db::MatchEvent {
+                    m: m.id.clone(),
+                    event: db_event.clone(),
+                };
+                let exists = {
+                    let ids = db::event_ids(&db, match_event.clone());
+                    ids.await.unwrap_or(vec![]).into_iter().next()
+                };
+                if let Some(id) = exists {
+                    id
+                } else {
+                    let create_event: Result<Option<db::Record>, Error> =
+                        db.create("real_event").content(match_event).await;
+                    let option = create_event.unwrap_or_else(|error| {
+                        panic!("{:?}", error);
+                    });
+                    option.unwrap()
+                }
+            };
+            let relate = db
+                .query(
+                    "RELATE book:fortuna->offers->$event SET
+                        odd=$odd,
+                        download=$download;",
+                )
+                .bind(("event", event_record.id))
+                .bind(("odd", odd))
+                .bind(("download", download_record.id.clone()));
+            match relate.await {
+                Ok(_) => println!("saved odd {}", odd),
+                Err(error) => println!("{:#?}", error),
+            }
+        }
+    }
+}
+
+async fn save_football_odds(client: &Client, db: &Surreal<ws::Client>) {
     let start = Instant::now();
-    dotenv().ok();
-    let db = db::connect().await;
     let match_urls = {
-        let now = Utc::now();
-        let later = now + Duration::hours(db::prematch_hours());
-        let ids = db::matches_date(&db, [now, later], db::Source::Fortuna);
-        let ids = ids.await.unwrap_or_else(|error| {
-            println!("{:?}", error);
-            panic!()
-        });
-        let ids = ids.into_iter().map(|x| x.id).collect();
-        let urls = db::fetch_match_urls(&db, ids, db::Source::Fortuna);
+        let match_ids = {
+            let now = Utc::now();
+            let later = now + Duration::hours(db::prematch_hours());
+            let ids = db::matches_date(&db, [now, later], db::Source::Fortuna);
+            let ids = ids.await.unwrap_or_else(|error| {
+                println!("{:#?}", error);
+                panic!()
+            });
+            ids.into_iter().map(|x| x.id).collect()
+        };
+        let urls = db::fetch_match_urls(&db, match_ids, db::Source::Fortuna);
         urls.await.unwrap_or_else(|error| {
-            println!("{:?}", error);
+            println!("{:#?}", error);
             panic!()
         })
     };
     println!("Elapsed time: {:.2?}", start.elapsed());
-    let mut client = ClientBuilder::native()
-        .connect(&browser::localhost(4444))
-        .await
-        .unwrap();
     let total_count = match_urls.len();
     println!("Total count: {}", total_count);
     let queue = Arc::new(Mutex::new(match_urls));
     let start = Instant::now();
-    let mut download_count = 0;
-    let url = format!(
-        "{}{}",
-        fortuna::prematch::URL,
-        fortuna::prematch::football::URL
-    );
+    let url = {
+        use fortuna::prematch::*;
+        format!("{}{}", URL, football::URL)
+    };
     client.goto(url.as_str()).await.unwrap();
-    browser::try_accepting_cookie(&mut client, fortuna::COOKIE_ACCEPT)
+    browser::try_accepting_cookie(client, fortuna::COOKIE_ACCEPT)
         .await
         .unwrap();
     while let Some(match_url) = queue.lock().await.pop() {
-        let m = match_url.m;
-        let url = match_url.url;
-        println!("{} - {}", m.player1, m.player2);
-        let events = {
-            let subpage =
-                fortuna::prematch::football::subpage::Page(url.clone());
-            let result = Tag::download(&mut client, subpage.clone()).await;
-            download_count += 1;
-            match result {
-                Ok(html) => html.document().events(),
-                Err(error) => {
-                    println!("{}", error);
-                    vec![]
-                }
-            }
-        };
-        println!("{:?}", events);
-        let download_record = {
-            let download: Result<Option<db::Record>, Error> = db
-                .create("download")
-                .content(db::Download {
-                    date: Utc::now().into(),
-                    m: m.id.clone(),
-                    source: db::Source::Fortuna,
-                })
-                .await;
-            match download {
-                Ok(option) => option.unwrap(),
-                Err(error) => {
-                    println!("{:?}", error);
-                    continue;
-                }
-            }
-        };
-        let players = [m.player1, m.player2];
-        for event in events {
-            let football_event = {
-                let translate = translate_event::<Football, FootballOption>(
-                    event.clone(),
-                    players.clone(),
-                );
-                match translate {
-                    Some(x) => x,
-                    _ => continue,
-                }
-            };
-            println!("{:?}", football_event);
-            for (option, odd) in football_event.odds {
-                let db_event = {
-                    let translate = translate_db(football_event.id, option);
-                    match translate {
-                        Ok(x) => x,
-                        Err(()) => continue,
-                    }
-                };
-                println!("{:?}", db_event);
-                let event_record: db::Record = {
-                    let match_event = db::MatchEvent {
-                        m: m.id.clone(),
-                        event: db_event.clone(),
-                    };
-                    let exists = {
-                        let ids = db::event_ids(&db, match_event.clone());
-                        ids.await.unwrap_or(vec![]).into_iter().next()
-                    };
-                    if let Some(id) = exists {
-                        println!("Ok(EXISTS)");
-                        id
-                    } else {
-                        let create_event: Result<Option<db::Record>, Error> =
-                            db.create("real_event").content(match_event).await;
-                        let option = create_event.unwrap_or_else(|error| {
-                            println!("{:?}", error);
-                            panic!()
-                        });
-                        println!("Ok(CREATE)");
-                        option.unwrap()
-                    }
-                };
-                let relate = db
-                    .query(
-                        "RELATE book:fortuna->offers->$event SET
-                        odd=$odd,
-                        download=$download;",
-                    )
-                    .bind(("event", event_record.id))
-                    .bind(("odd", odd))
-                    .bind(("download", download_record.id.clone()));
-                match relate.await {
-                    Ok(_) => println!("Ok(RELATE)"),
-                    Err(error) => println!("{:?}", error),
-                }
-            }
-        }
+        save_match_odds(client, db, match_url).await;
     }
-    client.close().await.unwrap();
     let elapsed = start.elapsed().as_secs_f32();
-    println!("Elapsed time: {:.2?}", elapsed);
     println!("Total count: {}", total_count);
-    println!("Download count: {}", download_count);
-    println!("{:.2?} / download", elapsed / download_count as f32);
+    println!("Elapsed time: {:.2?}", elapsed);
+}
+
+#[tokio::main]
+async fn main() {
+    dotenv().ok();
+    let db = db::connect().await;
+    let client = ClientBuilder::native()
+        .connect(&browser::localhost(4444))
+        .await
+        .unwrap();
+    save_football_odds(&client, &db).await;
+    client.close().await.unwrap();
 }
