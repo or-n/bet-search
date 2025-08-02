@@ -2,7 +2,7 @@ use crate::shared::db;
 use eat::*;
 use std::fmt::Debug;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Football {
     Win,
     NotWin,
@@ -18,8 +18,10 @@ pub enum FootballOption {
 impl Eat<&str, (), [String; 2]> for Football {
     fn eat(i: &str, _players: [String; 2]) -> Result<(&str, Self), ()> {
         use Football::*;
-        eat!(i, "Mecz", Win);
-        eat!(i, "Wynik meczu - dwójtyp", NotWin);
+        if let Ok(i) = "Wynik meczu".drop(i) {
+            eat!(i, " - dwójtyp", NotWin);
+            return Ok((i, Win));
+        }
         Err(())
     }
 }
@@ -27,15 +29,19 @@ impl Eat<&str, (), [String; 2]> for Football {
 impl Eat<&str, (), (Football, [String; 2])> for FootballOption {
     fn eat(
         i: &str,
-        (event, _players): (Football, [String; 2]),
+        (event, players): (Football, [String; 2]),
     ) -> Result<(&str, Self), ()> {
         use Football::*;
         use FootballOption::*;
         match event {
             Win => {
-                eat!(i, "0", Draw);
-                eat!(i, "1", Player1);
-                eat!(i, "2", Player2);
+                if let Ok(i) = players[0].as_str().drop(i) {
+                    return Ok((i, Player1));
+                }
+                if let Ok(i) = players[1].as_str().drop(i) {
+                    return Ok((i, Player2));
+                }
+                eat!(i, "Remis", Draw);
                 Err(())
             }
             NotWin => {

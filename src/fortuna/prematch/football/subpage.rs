@@ -1,3 +1,4 @@
+use crate::fortuna;
 use crate::fortuna::prematch::URL;
 use crate::shared::event::Event;
 use crate::utils::{
@@ -9,6 +10,7 @@ use eat::*;
 use fantoccini::{error::CmdError, Client, Locator};
 use scraper::{Html, Selector};
 use serde_json::json;
+use std::collections::HashSet;
 use tokio::time::{timeout, Duration};
 
 impl Eat<&str, (), ()> for Page {
@@ -89,15 +91,20 @@ async fn get_bet_titles(group: &fantoccini::elements::Element) -> Vec<String> {
     }
 }
 
-impl Download<Client, Page> for Tag<Page, String> {
+type Interest = HashSet<fortuna::event::football::Football>;
+type Players = [String; 2];
+
+impl Download<Client, (Page, Interest, Players)> for Tag<Page, String> {
     type Error = CmdError;
 
     async fn download(
         client: &Client,
-        data: Page,
+        data: (Page, Interest, Players),
     ) -> Result<Self, Self::Error> {
         let mut htmls = vec![];
-        client.goto(data.url().as_str()).await?;
+        client.goto(data.0.url().as_str()).await?;
+        let interest = data.1;
+        let players = data.2;
         let result = timeout(
             Duration::from_secs(4),
             client
@@ -128,7 +135,16 @@ impl Download<Client, Page> for Tag<Page, String> {
             if titles.is_empty() {
                 continue;
             }
-            // println!("{:?}", titles);
+            use fortuna::event::football::Football;
+            let event = match Football::eat(titles[0].as_str(), players.clone())
+            {
+                Ok(("", event)) => event,
+                _ => continue,
+            };
+            println!("{:?}", titles[0]);
+            if !interest.contains(&event) {
+                continue;
+            }
             let has_odds = group
                 .find(Locator::Css(".outcomes-container"))
                 .await

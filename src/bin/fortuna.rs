@@ -9,6 +9,7 @@ use odds::{
     shared::{db, event::translate_event},
     utils::{browser, download::Download, page::Tag},
 };
+use std::collections::HashSet;
 use std::{sync::Arc, time::Instant};
 use surrealdb::{engine::remote::ws, Error, Surreal};
 use tokio::sync::Mutex;
@@ -20,9 +21,18 @@ async fn save_match_odds(
     url: String,
 ) {
     println!("{} - {}", m.player1, m.player2);
+    let players = [m.player1, m.player2];
     let events = {
         let subpage = fortuna::prematch::football::subpage::Page(url.clone());
-        let result = Tag::download(client, subpage.clone()).await;
+        let interest = {
+            let mut xs = HashSet::new();
+            use fortuna::event::football::Football::*;
+            xs.insert(Win);
+            xs.insert(NotWin);
+            xs
+        };
+        let data = (subpage.clone(), interest, players.clone());
+        let result = Tag::download(client, data).await;
         match result {
             Ok(html) => html.document().events(),
             Err(error) => {
@@ -46,7 +56,6 @@ async fn save_match_odds(
             Err(error) => panic!("download record: {:#?}", error),
         }
     };
-    let players = [m.player1, m.player2];
     for event in events {
         let football_event = {
             let translate = translate_event::<Football, FootballOption>(
