@@ -2,12 +2,13 @@ use chrono::{Duration, Utc};
 use dotenv::dotenv;
 use fantoccini::{Client, ClientBuilder};
 use odds::{
+    adapter::browser,
     fortuna::{
         self,
         event::football::{translate_db, Football, FootballOption},
     },
     shared::{db, event::translate_event},
-    utils::{browser, download::Download, page::Tag},
+    utils::{self, download::Download, page::Tag},
 };
 use std::collections::HashSet;
 use std::{sync::Arc, time::Instant};
@@ -29,6 +30,7 @@ async fn save_match_odds(
             use fortuna::event::football::Football::*;
             xs.insert(Win);
             xs.insert(NotWin);
+            xs.insert(Goals);
             xs
         };
         let data = (subpage.clone(), interest, players.clone());
@@ -41,7 +43,7 @@ async fn save_match_odds(
             }
         }
     };
-    // println!("{:#?}", events);
+    println!("{:#?}", events);
     let download_record = {
         let download: Result<Option<db::Record>, Error> = db
             .create("download")
@@ -158,7 +160,7 @@ async fn main() {
     dotenv().ok();
     let db = db::connect().await;
     let client = ClientBuilder::native()
-        .connect(&browser::localhost(4444))
+        .connect(&utils::localhost(4444))
         .await
         .unwrap();
     save_football_odds(&client, &db).await;

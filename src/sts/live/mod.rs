@@ -1,6 +1,7 @@
 pub mod tennis;
 
-use crate::utils::{browser, download::Download, page};
+use crate::adapter::browser;
+use crate::utils::{download::Download, page};
 use fantoccini::{error::CmdError, Client};
 use page::Tag;
 

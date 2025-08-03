@@ -1,7 +1,5 @@
-use crate::utils::{
-    browser,
-    scrape::{clean_text, split2},
-};
+use crate::adapter::scrape::clean_text;
+use crate::utils::{self, split2};
 use chrono::{Datelike, Local, NaiveDate, NaiveDateTime, NaiveTime};
 use fantoccini::{error::CmdError, Client, Locator};
 use scraper::{Element, Html, Selector};
@@ -14,7 +12,7 @@ pub async fn find_match(
     client.goto(super::URL).await?;
     let search = client.find(Locator::Id("search")).await?;
     search.send_keys(match_name).await?;
-    search.send_keys(browser::ENTER).await?;
+    search.send_keys(utils::ENTER).await?;
     sleep(Duration::from_secs(4)).await;
     client.source().await
 }

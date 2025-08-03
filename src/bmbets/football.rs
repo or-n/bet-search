@@ -37,9 +37,10 @@ pub enum Variant {
 }
 
 pub fn tab(event: db::Event) -> Vec<Tab> {
+    use db::Football::*;
     use Tab::*;
     match event.tag {
-        db::Football::GoalD => match (event.a, event.b) {
+        GoalD => match (event.a, event.b) {
             (Some(0.5), None) => vec![Winner, AsianHandicap],
             (Some(-0.5), None) => vec![DoubleChance, AsianHandicap],
             (None, Some(-0.5)) => vec![Winner, AsianHandicap],
@@ -48,30 +49,35 @@ pub fn tab(event: db::Event) -> Vec<Tab> {
             (Some(0.5), Some(-0.5)) => vec![DoubleChance],
             _ => vec![],
         },
+        Goals => todo!(),
     }
 }
 
 pub fn toolbar(event: db::Event) -> Option<Toolbar> {
+    use db::Football::*;
     use Toolbar::*;
     match event.tag {
-        db::Football::GoalD => match (event.ta, event.tb) {
+        GoalD => match (event.ta, event.tb) {
             (None, None) => Some(FT),
             _ => None,
         },
+        Goals => todo!(),
     }
 }
 
 pub fn variant(event: db::Event, tab: Tab) -> Vec<Variant> {
+    use db::Football::*;
     use Tab::*;
     use Variant::*;
     match event.tag {
-        db::Football::GoalD => match (event.a, event.b, tab) {
+        GoalD => match (event.a, event.b, tab) {
             (Some(0.5), None, AsianHandicap) => vec![Handicap(0.5)],
             (Some(-0.5), None, AsianHandicap) => vec![Handicap(-0.5)],
             (None, Some(-0.5), AsianHandicap) => vec![Handicap(-0.5)],
             (None, Some(0.5), AsianHandicap) => vec![Handicap(0.5)],
             _ => vec![],
         },
+        Goals => todo!(),
     }
 }
 

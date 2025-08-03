@@ -1,7 +1,7 @@
 use fantoccini::ClientBuilder;
 use odds::{
     surebet,
-    utils::{browser, download::Download, page::Tag},
+    utils::{self, download::Download, page::Tag},
 };
 use std::time::Instant;
 
@@ -9,7 +9,7 @@ use std::time::Instant;
 async fn main() {
     let start = Instant::now();
     let mut client = ClientBuilder::native()
-        .connect(&browser::localhost(4444))
+        .connect(&utils::localhost(4444))
         .await
         .unwrap();
     let page = surebet::value::Page;

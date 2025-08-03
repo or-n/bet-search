@@ -5,7 +5,7 @@ use fantoccini::{error::CmdError, Client, ClientBuilder};
 use odds::{
     bmbets::{football, menu},
     shared::db,
-    utils::browser,
+    utils,
 };
 use serde_json::{json, Map};
 use std::{fmt::Debug, time::Instant};
@@ -123,7 +123,7 @@ async fn main() {
         let caps: Map<_, _> = caps.as_object().unwrap().clone();
         ClientBuilder::native()
             .capabilities(caps)
-            .connect(&browser::localhost(4444))
+            .connect(&utils::localhost(4444))
             .await
             .unwrap()
     };

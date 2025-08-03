@@ -2,18 +2,20 @@
 pub mod subpages;
 pub mod tenis;
 
-use crate::utils::{browser, download::Download, page, page::Tag};
+use crate::adapter::browser;
+use crate::utils::{download::Download, page, page::Tag};
+use fantoccini::{error::CmdError, Client};
 
 const URL: &str = "https://live.efortuna.pl";
 
 #[derive(Debug, Clone, Copy)]
 pub struct Page;
 
-impl Download<fantoccini::Client, Page> for Tag<Page, String> {
-    type Error = fantoccini::error::CmdError;
+impl Download<Client, Page> for Tag<Page, String> {
+    type Error = CmdError;
 
     async fn download(
-        client: &fantoccini::Client,
+        client: &Client,
         _data: Page,
     ) -> Result<Self, Self::Error> {
         client.goto(URL).await?;

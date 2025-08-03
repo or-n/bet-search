@@ -219,6 +219,7 @@ pub fn sanitize(x: &str) -> String {
 pub enum Football {
     #[default]
     GoalD,
+    Goals,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
@@ -367,6 +368,7 @@ impl Serialize for Football {
     {
         let id_str = match self {
             Football::GoalD => "football:goal_diff",
+            Football::Goals => "football:goals",
         };
         let thing: Thing = id_str.parse().unwrap();
         thing.serialize(serializer)
@@ -381,6 +383,7 @@ impl<'de> Deserialize<'de> for Football {
         let thing = Thing::deserialize(deserializer)?;
         match thing.to_string().as_str() {
             "football:goal_diff" => Ok(Football::GoalD),
+            "football:goals" => Ok(Football::Goals),
             other => Err(de::Error::custom(format!(
                 "Unknown football id: {}",
                 other

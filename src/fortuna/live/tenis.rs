@@ -1,5 +1,6 @@
+use crate::adapter::browser;
 use crate::fortuna::{live::URL, COOKIE_ACCEPT};
-use crate::utils::{browser, download, page::Tag};
+use crate::utils::{download, page::Tag};
 
 pub struct Page;
 

@@ -1,12 +1,11 @@
 pub mod subpage;
 
+use crate::adapter::{browser, date, scrape::clean_text};
 use crate::fortuna::COOKIE_ACCEPT;
 use crate::shared::event::Match;
 use crate::utils::{
-    browser, date,
     download::Download,
     page::{Name, Tag},
-    scrape::clean_text,
 };
 use eat::*;
 use fantoccini::{error::CmdError, Client, Locator};

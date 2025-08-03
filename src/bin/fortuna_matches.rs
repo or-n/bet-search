@@ -2,9 +2,10 @@ use chrono::*;
 use dotenv::dotenv;
 use fantoccini::{Client, ClientBuilder};
 use odds::{
+    adapter::date,
     fortuna,
     shared::db,
-    utils::{browser, date, download::Download, page::Tag},
+    utils::{self, download::Download, page::Tag},
 };
 use std::time::Instant;
 use surrealdb::{engine::remote::ws, error::Api, Error, Surreal};
@@ -58,7 +59,7 @@ async fn main() {
     dotenv().ok();
     let db = db::connect().await;
     let mut client = ClientBuilder::native()
-        .connect(&browser::localhost(4444))
+        .connect(&utils::localhost(4444))
         .await
         .unwrap();
     save_football_matches(&mut client, db).await;

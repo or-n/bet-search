@@ -1,7 +1,8 @@
 use fantoccini::ClientBuilder;
-use odds::shared;
-use odds::sts;
-use odds::utils::{browser, download::Download, page::Tag};
+use odds::{
+    shared, sts,
+    utils::{self, download::Download, page::Tag},
+};
 use shared::book::Subpages;
 use std::time::Instant;
 
@@ -9,7 +10,7 @@ use std::time::Instant;
 async fn main() {
     let start = Instant::now();
     let mut client = ClientBuilder::native()
-        .connect(&browser::localhost(4444))
+        .connect(&utils::localhost(4444))
         .await
         .unwrap();
     let page = sts::live::tennis::Page;

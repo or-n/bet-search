@@ -1,10 +1,10 @@
+use crate::adapter::scrape::clean_text;
 use crate::fortuna;
 use crate::fortuna::prematch::URL;
 use crate::shared::event::Event;
 use crate::utils::{
     download::Download,
     page::{Name, Tag, Url},
-    scrape::clean_text,
 };
 use eat::*;
 use fantoccini::{error::CmdError, Client, Locator};

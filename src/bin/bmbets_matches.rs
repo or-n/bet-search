@@ -2,9 +2,10 @@ use chrono::{DateTime, Duration, Local, Utc};
 use dotenv::dotenv;
 use fantoccini::{Client, ClientBuilder};
 use odds::{
+    adapter::date,
     bmbets::search::{find_match, hits, Hit},
     shared::db,
-    utils::{browser, date},
+    utils,
 };
 use scraper::Html;
 use serde_json::{json, Map};
@@ -132,7 +133,7 @@ async fn main() {
         let caps: Map<_, _> = caps.as_object().unwrap().clone();
         ClientBuilder::native()
             .capabilities(caps)
-            .connect(&browser::localhost(4444))
+            .connect(&utils::localhost(4444))
             .await
             .unwrap()
     };

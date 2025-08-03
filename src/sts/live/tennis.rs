@@ -1,5 +1,6 @@
+use crate::adapter::{browser, scrape};
 use crate::shared::book;
-use crate::utils::{browser, download::Download, page, scrape};
+use crate::utils::{download::Download, page};
 use book::Subpages;
 use fantoccini::{error::CmdError, Client};
 use page::{Name, Tag, Url};
