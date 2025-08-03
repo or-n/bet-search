@@ -43,7 +43,7 @@ async fn save_match_odds(
             }
         }
     };
-    println!("{:#?}", events);
+    // println!("{:#?}", events);
     let download_record = {
         let download: Result<Option<db::Record>, Error> = db
             .create("download")
@@ -106,7 +106,7 @@ async fn save_match_odds(
                 .bind(("odd", odd))
                 .bind(("download", download_record.id.clone()));
             match relate.await {
-                Ok(_) => println!("saved odd {}", odd),
+                Ok(_) => println!("{}", odd),
                 Err(error) => println!("relate: {:#?}", error),
             }
         }

@@ -61,7 +61,7 @@ impl Download<Client, Page> for Tag<Page, String> {
             const elem = arguments[0];
             elem.scrollIntoView({behavior: 'auto', block: 'center'});
             const rect = elem.getBoundingClientRect();
-            const bottomOverlayHeight = 150;
+            const bottomOverlayHeight = 300;
             if (rect.bottom > (window.innerHeight - bottomOverlayHeight)) {
                 window.scrollBy(0, rect.bottom - (window.innerHeight - bottomOverlayHeight));
             }

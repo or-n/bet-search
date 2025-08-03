@@ -37,14 +37,10 @@ impl Tag<Page, Html> {
                     let id_name_item = id_item.select(&id_name).next().unwrap();
                     clean_text(id_name_item.text())
                 };
-                let odds = {
-                    let odds_item = match id_item.select(&odds).next() {
-                        Some(x) => x,
-                        _ => return Event { id, odds: vec![] },
-                    };
-                    odds_item
-                        .select(&odd)
-                        .filter_map(|odd_item| {
+                let odds = id_item
+                    .select(&odds)
+                    .flat_map(|odds_item| {
+                        odds_item.select(&odd).filter_map(|odd_item| {
                             let name = {
                                 let odd_name_item =
                                     odd_item.select(&odd_name).next()?;
@@ -59,8 +55,8 @@ impl Tag<Page, Html> {
                             };
                             Some((name, value))
                         })
-                        .collect()
-                };
+                    })
+                    .collect();
                 Event { id, odds }
             })
             .collect()

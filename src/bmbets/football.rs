@@ -34,6 +34,7 @@ pub enum Toolbar {
 #[derive(Debug, PartialEq)]
 pub enum Variant {
     Handicap(f64),
+    Total(f64),
 }
 
 pub fn tab(event: db::Event) -> Vec<Tab> {
@@ -49,7 +50,7 @@ pub fn tab(event: db::Event) -> Vec<Tab> {
             (Some(0.5), Some(-0.5)) => vec![DoubleChance],
             _ => vec![],
         },
-        Goals => todo!(),
+        Goals => vec![TotalsGoals],
     }
 }
 
@@ -61,7 +62,10 @@ pub fn toolbar(event: db::Event) -> Option<Toolbar> {
             (None, None) => Some(FT),
             _ => None,
         },
-        Goals => todo!(),
+        Goals => match (event.ta, event.tb) {
+            (None, None) => Some(FT),
+            _ => None,
+        },
     }
 }
 
@@ -77,7 +81,11 @@ pub fn variant(event: db::Event, tab: Tab) -> Vec<Variant> {
             (None, Some(0.5), AsianHandicap) => vec![Handicap(0.5)],
             _ => vec![],
         },
-        Goals => todo!(),
+        Goals => match (event.a, event.b, tab) {
+            (Some(x), None, TotalsGoals) => vec![Total(x)],
+            (None, Some(x), TotalsGoals) => vec![Total(x)],
+            _ => vec![],
+        },
     }
 }
 
@@ -129,6 +137,10 @@ impl Eat<&str, (), ()> for Variant {
         if let Ok(i) = "Handicap ".drop(i) {
             let (i, value) = f64::eat(i, ())?;
             return Ok((i, Handicap(value)));
+        }
+        if let Ok(i) = "Total ".drop(i) {
+            let (i, value) = f64::eat(i, ())?;
+            return Ok((i, Total(value)));
         }
         Err(())
     }

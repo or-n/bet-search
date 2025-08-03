@@ -59,14 +59,12 @@ impl Eat<&str, (), (Football, [String; 2])> for FootballOption {
                 Err(())
             }
             Goals => {
-                println!("parsing goals option: {:?}", i);
                 let lt = || {
                     eat!(i, "mniej niż ", true);
                     eat!(i, "więcej niż ", false);
                     Err(())
                 };
                 let (i, lt) = lt()?;
-                // let i = '\u{a0}'.drop(i)?;
                 let (i, x) = f64::eat(i, ())?;
                 Ok((i, if lt { LT(x) } else { GT(x) }))
             }
