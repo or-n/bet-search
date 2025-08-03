@@ -15,11 +15,11 @@ fn eat_and_find<Id, T>(
     label: &str,
     x_to_find: Id,
     xs: Vec<(String, T)>,
-) -> Option<(usize, Id, T)>
+) -> Option<(Id, T)>
 where
     Id: for<'a> Eat<&'a str, (), ()> + PartialEq + Debug,
 {
-    xs.into_iter().enumerate().find_map(|(idx, (i, value))| {
+    xs.into_iter().find_map(|(i, value)| {
         let (remains, x) = match Id::eat(&i, ()).ok() {
             Some(x) => x,
             _ => panic!("{}: {:?}", label, i),
@@ -31,14 +31,14 @@ where
         if x != x_to_find {
             return None;
         }
-        Some((idx, x, value))
+        Some((x, value))
     })
 }
 
 async fn goto(client: &Client, e: db::Event) -> Result<(), CmdError> {
     let event_tabs = football::tab(e.clone());
     for event_tab in event_tabs {
-        let (_, tab, button) = {
+        let (tab, button) = {
             menu::dropdown(client).await?;
             let links = menu::tab_links(client).await?;
             match eat_and_find("tab", event_tab, links) {
@@ -50,7 +50,7 @@ async fn goto(client: &Client, e: db::Event) -> Result<(), CmdError> {
             }
         };
         button.click().await?;
-        let (_, toolbar, button) = {
+        let (toolbar, button) = {
             let event_toolbar = match football::toolbar(e.clone()) {
                 Some(x) => x,
                 _ => {
@@ -78,7 +78,7 @@ async fn goto(client: &Client, e: db::Event) -> Result<(), CmdError> {
             Some(event_variant) => {
                 let links = menu::variants(odds_content).await?;
                 match eat_and_find("variant", event_variant, links) {
-                    Some((_, variant, button)) => {
+                    Some((variant, button)) => {
                         println!("{:?}", variant);
                         button.click().await?;
                         button
