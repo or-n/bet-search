@@ -19,3 +19,16 @@ pub const _ESC: &str = "\u{E00C}";
 pub fn localhost(port: u16) -> String {
     format!("http://localhost:{}", port)
 }
+
+pub fn sum_columns<I>(mut vectors: I) -> Vec<f32>
+where
+    I: Iterator<Item = Vec<f32>>,
+{
+    let first = match vectors.next() {
+        Some(v) => v,
+        None => return vec![],
+    };
+    vectors.fold(first, |acc, vec| {
+        acc.iter().zip(vec.iter()).map(|(a, b)| a + b).collect()
+    })
+}

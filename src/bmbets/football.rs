@@ -24,6 +24,18 @@ pub enum Tab {
     OddEven,
 }
 
+impl Tab {
+    pub fn tbar(&self) -> usize {
+        use Tab::*;
+        match self {
+            Winner => 3,
+            AsianHandicap => 1,
+            TotalsGoals => 4,
+            _ => todo!(),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Toolbar {
     FT,

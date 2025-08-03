@@ -5,10 +5,15 @@ use fantoccini::{
     Locator::{Css, XPath},
 };
 use futures::future::join_all;
-use tokio::time::{sleep, Duration};
+use tokio::time::{timeout, Duration};
 
-pub async fn dropdown(client: &mut Client) -> Result<(), CmdError> {
-    let dropdown = client.wait().for_element(Css("#elmTabUl")).await?;
+pub async fn dropdown(client: &Client) -> Result<(), CmdError> {
+    let dropdown = timeout(
+        Duration::from_secs(4),
+        client.wait().for_element(Css("#elmTabUl")),
+    )
+    .await
+    .map_err(|_| CmdError::WaitTimeout)??;
     let expanded = dropdown.attr("expanded").await?;
     if expanded != Some("true".to_string()) {
         dropdown.click().await?;
@@ -19,32 +24,50 @@ pub async fn dropdown(client: &mut Client) -> Result<(), CmdError> {
 async fn links(list: Element) -> Result<Vec<(String, Element)>, CmdError> {
     let links = list.find_all(Css("a")).await?;
     Ok(join_all(links.into_iter().map(|link| async move {
-        let name = link.html(true).await.unwrap_or_else(|_| "".to_string());
+        let name = link.html(true).await.unwrap();
         (name, link)
     }))
     .await)
 }
 
 pub async fn tab_links(
-    client: &mut Client,
+    client: &Client,
 ) -> Result<Vec<(String, Element)>, CmdError> {
-    let list = client.wait().for_element(Css(".list")).await?;
+    let list = timeout(
+        Duration::from_secs(4),
+        client.wait().for_element(Css(".list")),
+    )
+    .await
+    .map_err(|_| CmdError::WaitTimeout)??;
     links(list).await
 }
 
 pub async fn toolbar_links(
-    client: &mut Client,
+    client: &Client,
+    tbar: usize,
 ) -> Result<Vec<(String, Element)>, CmdError> {
-    let toolbar = client.wait().for_element(Css(".ui-toolbar")).await?;
-    let list = toolbar.find(Css("ul")).await?;
+    let list_id = format!(".ui-toolbar ul#tbar_{}", tbar);
+    let list = timeout(
+        Duration::from_secs(4),
+        client.wait().for_element(Css(&list_id)),
+    )
+    .await
+    .map_err(|_| CmdError::WaitTimeout)??;
     links(list).await
 }
 
+pub async fn odds_content(client: &Client) -> Result<Element, CmdError> {
+    timeout(
+        Duration::from_secs(4),
+        client.wait().for_element(Css("#oddsContent")),
+    )
+    .await
+    .map_err(|_| CmdError::WaitTimeout)?
+}
+
 pub async fn variants(
-    client: &mut Client,
+    content: Element,
 ) -> Result<Vec<(String, Element)>, CmdError> {
-    let content = client.find(Css("#oddsContent")).await?;
-    sleep(Duration::from_millis(2000)).await;
     let divs = content.find_all(Css("div.caption")).await?;
     let divs = join_all(divs.into_iter().map(|div| async move {
         let span = div.find(Css("span.caption-txt")).await?;
@@ -63,11 +86,15 @@ pub async fn odds_table(
     if !parent.is_displayed().await? {
         div.click().await?;
     }
-    let bmtbody = bmdiv.find(Css("tbody")).await?;
-    let bmtrs = bmtbody.find_all(Css("tr")).await?;
-    let odddiv = parent.find(Css(".odddiv")).await?;
-    let oddtbody = odddiv.find(Css("tbody")).await?;
-    let oddtrs = oddtbody.find_all(Css("tr")).await?;
+    let bmtrs = {
+        let bmtbody = bmdiv.find(Css("tbody")).await?;
+        bmtbody.find_all(Css("tr")).await?
+    };
+    let oddtrs = {
+        let odddiv = parent.find(Css(".odddiv")).await?;
+        let oddtbody = odddiv.find(Css("tbody")).await?;
+        oddtbody.find_all(Css("tr")).await?
+    };
     let trs: Vec<_> = bmtrs.into_iter().zip(oddtrs.into_iter()).collect();
     let r = join_all(trs.into_iter().map(|(bmtr, oddtr)| async move {
         let bm = bmtr.find(Css("td span.hidden-480")).await?;
