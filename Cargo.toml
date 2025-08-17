@@ -32,6 +32,10 @@ name = "fortuna_zk"
 path = "src/bin/fortuna_zk.rs"
 
 [[bin]]
+name = "fortuna_single"
+path = "src/bin/fortuna_single.rs"
+
+[[bin]]
 name = "sts"
 path = "src/bin/sts.rs"
 

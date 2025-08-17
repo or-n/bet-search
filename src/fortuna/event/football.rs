@@ -7,13 +7,25 @@ pub enum Football {
     Win,
     NotWin,
     Goals,
+    Handicap,
 }
 
 #[derive(Debug, Clone)]
 pub enum FootballOption {
     Draw,
-    Player1,
-    Player2,
+    P(Player),
+    L(Line),
+    PL(Player, Line),
+}
+
+#[derive(Debug, Clone)]
+pub enum Player {
+    P1,
+    P2,
+}
+
+#[derive(Debug, Clone)]
+pub enum Line {
     LT(f64),
     GT(f64),
 }
@@ -30,6 +42,7 @@ impl Eat<&str, (), [String; 2]> for Football {
                 return Ok((i, Goals));
             }
         }
+        eat!(i, "Handicap", Handicap);
         Err(())
     }
 }
@@ -41,21 +54,23 @@ impl Eat<&str, (), (Football, [String; 2])> for FootballOption {
     ) -> Result<(&str, Self), ()> {
         use Football::*;
         use FootballOption::*;
+        use Line::*;
+        use Player::*;
         match event {
             Win => {
                 if let Ok(i) = players[0].as_str().drop(i) {
-                    return Ok((i, Player1));
+                    return Ok((i, P(P1)));
                 }
                 if let Ok(i) = players[1].as_str().drop(i) {
-                    return Ok((i, Player2));
+                    return Ok((i, P(P2)));
                 }
                 eat!(i, "Remis", Draw);
                 Err(())
             }
             NotWin => {
-                eat!(i, "10", Player2);
+                eat!(i, "10", P(P2));
                 eat!(i, "12", Draw);
-                eat!(i, "02", Player1);
+                eat!(i, "02", P(P1));
                 Err(())
             }
             Goals => {
@@ -66,7 +81,25 @@ impl Eat<&str, (), (Football, [String; 2])> for FootballOption {
                 };
                 let (i, lt) = lt()?;
                 let (i, x) = f64::eat(i, ())?;
-                Ok((i, if lt { LT(x) } else { GT(x) }))
+                let line = if lt { LT(x) } else { GT(x) };
+                Ok((i, L(line)))
+            }
+            Handicap => {
+                let p = || {
+                    eat!(i, "1 ", P1);
+                    eat!(i, "2 ", P2);
+                    Err(())
+                };
+                let (i, p) = p()?;
+                let lt = || {
+                    eat!(i, "-", true);
+                    eat!(i, "+", false);
+                    Err(())
+                };
+                let (i, lt) = lt()?;
+                let (i, x) = f64::eat(i, ())?;
+                let line = if lt { LT(x) } else { GT(x) };
+                Ok((i, PL(p, line)))
             }
         }
     }
@@ -75,12 +108,14 @@ impl Eat<&str, (), (Football, [String; 2])> for FootballOption {
 pub fn translate_db(x: Football, o: FootballOption) -> Result<db::Event, ()> {
     use Football::*;
     use FootballOption::*;
+    use Line::*;
+    use Player::*;
     match x {
         Win => {
             let (a, b) = match o {
                 Draw => (Some(-0.5), Some(0.5)),
-                Player1 => (None, Some(-0.5)),
-                Player2 => (Some(0.5), None),
+                P(P1) => (None, Some(-0.5)),
+                P(P2) => (Some(0.5), None),
                 _ => return Err(()),
             };
             Ok(db::Event {
@@ -93,8 +128,8 @@ pub fn translate_db(x: Football, o: FootballOption) -> Result<db::Event, ()> {
         NotWin => {
             let (a, b) = match o {
                 Draw => (Some(0.5), Some(-0.5)),
-                Player1 => (Some(-0.5), None),
-                Player2 => (None, Some(0.5)),
+                P(P1) => (Some(-0.5), None),
+                P(P2) => (None, Some(0.5)),
                 _ => return Err(()),
             };
             Ok(db::Event {
@@ -106,8 +141,8 @@ pub fn translate_db(x: Football, o: FootballOption) -> Result<db::Event, ()> {
         }
         Goals => {
             let (a, b) = match o {
-                LT(x) => (None, Some(x)),
-                GT(x) => (Some(x), None),
+                L(LT(x)) => (None, Some(x)),
+                L(GT(x)) => (Some(x), None),
                 _ => return Err(()),
             };
             Ok(db::Event {
@@ -117,5 +152,6 @@ pub fn translate_db(x: Football, o: FootballOption) -> Result<db::Event, ()> {
                 ..db::Event::default()
             })
         }
+        _ => todo!(),
     }
 }

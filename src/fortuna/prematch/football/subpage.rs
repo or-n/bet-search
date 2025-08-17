@@ -1,6 +1,5 @@
-use crate::adapter::scrape::clean_text;
-use crate::fortuna;
-use crate::fortuna::prematch::URL;
+use crate::adapter::{browser, scrape::clean_text};
+use crate::fortuna::{self, prematch::URL, COOKIE_ACCEPT};
 use crate::shared::event::Event;
 use crate::utils::{
     download::Download,
@@ -99,6 +98,7 @@ impl Download<Client, (Page, Interest, Players)> for Tag<Page, String> {
     ) -> Result<Self, Self::Error> {
         let mut htmls = vec![];
         client.goto(data.0.url().as_str()).await?;
+        browser::try_accepting_cookie(client, COOKIE_ACCEPT).await?;
         let interest = data.1;
         let players = data.2;
         let result = timeout(
