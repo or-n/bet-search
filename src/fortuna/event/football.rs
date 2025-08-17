@@ -5,9 +5,23 @@ use std::fmt::Debug;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Football {
     Win,
+    WinH1,
+    WinH2,
     NotWin,
     Goals,
+    GoalsH1,
+    GoalsH2,
     Handicap,
+    Individual(Player, FootballPlayer),
+    BTS,
+    Penalty,
+    Corners,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FootballPlayer {
+    Goals,
+    Corners,
 }
 
 #[derive(Debug, Clone)]
@@ -18,7 +32,7 @@ pub enum FootballOption {
     PL(Player, Line),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Player {
     P1,
     P2,
@@ -31,8 +45,9 @@ pub enum Line {
 }
 
 impl Eat<&str, (), [String; 2]> for Football {
-    fn eat(i: &str, _players: [String; 2]) -> Result<(&str, Self), ()> {
+    fn eat(i: &str, players: [String; 2]) -> Result<(&str, Self), ()> {
         use Football::*;
+        use Player::*;
         if let Ok(i) = "Wynik meczu".drop(i) {
             eat!(i, " - dwójtyp", NotWin);
             return Ok((i, Win));
@@ -43,8 +58,39 @@ impl Eat<&str, (), [String; 2]> for Football {
             }
         }
         eat!(i, "Handicap", Handicap);
+        if let Ok(i) = players[0].as_str().drop(i) {
+            let (i, x) = individual(i)?;
+            return Ok((i, Individual(P1, x)));
+        }
+        if let Ok(i) = players[1].as_str().drop(i) {
+            let (i, x) = individual(i)?;
+            return Ok((i, Individual(P2, x)));
+        }
+        eat!(i, "Obie drużyny strzelą gola", BTS);
+        eat!(i, "Rzut karny", Penalty);
+        if let Ok(i) = "1.połowa".drop(i) {
+            eat!(i, " liczba goli", GoalsH1);
+            return Ok((i, WinH1));
+        }
+        if let Ok(i) = "2.połowa".drop(i) {
+            eat!(i, " liczba goli", GoalsH2);
+            return Ok((i, WinH2));
+        }
+        eat!(
+            i,
+            "liczba rzutów rożnych (razem z ewentualną dogrywką)",
+            Corners
+        );
         Err(())
     }
+}
+
+fn individual(i: &str) -> Result<(&str, FootballPlayer), ()> {
+    use FootballPlayer::*;
+    let i = " ".drop(i)?;
+    eat!(i, "liczba goli", Goals);
+    eat!(i, "liczba rzutów rożnych", Corners);
+    Err(())
 }
 
 impl Eat<&str, (), (Football, [String; 2])> for FootballOption {
@@ -101,6 +147,14 @@ impl Eat<&str, (), (Football, [String; 2])> for FootballOption {
                 let line = if lt { LT(x) } else { GT(x) };
                 Ok((i, PL(p, line)))
             }
+            Individual(_, _) => todo!(),
+            BTS => todo!(),
+            Penalty => todo!(),
+            WinH1 => todo!(),
+            WinH2 => todo!(),
+            GoalsH1 => todo!(),
+            GoalsH2 => todo!(),
+            Corners => todo!(),
         }
     }
 }

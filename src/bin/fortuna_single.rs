@@ -7,17 +7,33 @@ use odds::{
 };
 use std::collections::HashSet;
 
-async fn save_match_odds(client: &Client, players: [String; 2], url: String) {
+async fn print_match_odds(client: &Client, players: [String; 2], url: String) {
     println!("{} - {}", players[0], players[1]);
     let events = {
         let subpage = fortuna::prematch::football::subpage::Page(url.clone());
         let interest = {
             let mut xs = HashSet::new();
-            use fortuna::event::football::Football::*;
+            use football::Football::*;
+            use fortuna::event::football;
             xs.insert(Win);
+            xs.insert(WinH1);
+            xs.insert(WinH2);
             xs.insert(NotWin);
             xs.insert(Goals);
+            xs.insert(GoalsH1);
+            xs.insert(GoalsH2);
             xs.insert(Handicap);
+            xs.insert(Corners);
+            xs.insert(Penalty);
+            xs.insert(BTS);
+            {
+                use football::FootballPlayer::*;
+                use football::Player::*;
+                xs.insert(Individual(P1, Goals));
+                xs.insert(Individual(P2, Goals));
+                xs.insert(Individual(P1, Corners));
+                xs.insert(Individual(P2, Corners));
+            }
             xs
         };
         let data = (subpage.clone(), interest, players.clone());
@@ -58,6 +74,6 @@ async fn main() {
     let player1 = "Pogoń Sz.";
     let player2 = "Górnik Z.";
     let players = [player1.into(), player2.into()];
-    save_match_odds(&client, players, url).await;
+    print_match_odds(&client, players, url).await;
     client.close().await.unwrap();
 }
