@@ -1,16 +1,29 @@
 use dotenv::dotenv;
+use eat::*;
 use fantoccini::{Client, ClientBuilder};
 use odds::{
     fortuna,
     shared::event::Event,
-    utils::{self, download::Download, page::Tag},
+    utils::{
+        self,
+        download::Download,
+        page::{Tag, Url},
+    },
 };
 use std::collections::HashSet;
 
-async fn print_match_odds(client: &Client, players: [String; 2], url: String) {
+async fn print_match_odds(client: &Client, url: String) {
+    use fortuna::prematch::football::subpage;
+    let page = subpage::Page(url.clone());
+    let players = {
+        let document = subpage::init_download(client, page.url().as_str())
+            .await
+            .unwrap()
+            .document();
+        document.players()
+    };
     println!("{} - {}", players[0], players[1]);
-    let events = {
-        let subpage = fortuna::prematch::football::subpage::Page(url.clone());
+    let document = {
         let interest = {
             let mut xs = HashSet::new();
             use football::Football::*;
@@ -36,16 +49,17 @@ async fn print_match_odds(client: &Client, players: [String; 2], url: String) {
             }
             xs
         };
-        let data = (subpage.clone(), interest, players.clone());
+        let data = (page.clone(), interest, players.clone());
         let result = Tag::download(client, data).await;
         match result {
-            Ok(html) => html.document().events(),
+            Ok(html) => html.document(),
             Err(error) => {
                 println!("download: {:#?}", error);
-                vec![]
+                return;
             }
         }
     };
+    let events = document.events();
     let events = events.into_iter().filter_map(|e| {
         let odds = e
             .odds
@@ -61,6 +75,10 @@ async fn print_match_odds(client: &Client, players: [String; 2], url: String) {
     println!("{:#?}", events);
 }
 
+pub fn env(name: &str) -> String {
+    std::env::var(name).expect(name)
+}
+
 #[tokio::main]
 async fn main() {
     dotenv().ok();
@@ -68,12 +86,11 @@ async fn main() {
         .connect(&utils::localhost(4444))
         .await
         .unwrap();
-    let pre = "/zaklady-bukmacherskie/pika-nozna/";
-    let sub = "polska-3/ekstraklasa-polska/pogon-sz-gornik-z?tab=offer";
-    let url = format!("{}{}", pre, sub);
-    let player1 = "Pogoń Sz.";
-    let player2 = "Górnik Z.";
-    let players = [player1.into(), player2.into()];
-    print_match_odds(&client, players, url).await;
+    let url = env("URL");
+    let url = match "https://www.efortuna.pl".drop(url.as_str()) {
+        Ok(i) => i.into(),
+        _ => url,
+    };
+    print_match_odds(&client, url).await;
     client.close().await.unwrap();
 }

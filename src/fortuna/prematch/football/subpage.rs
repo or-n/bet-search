@@ -22,6 +22,21 @@ impl Eat<&str, (), ()> for Page {
 }
 
 impl Tag<Page, Html> {
+    pub fn players(&self) -> [String; 2] {
+        let header = Selector::parse(".detail-header").unwrap();
+        let label =
+            Selector::parse(".participants-panel__participant-label").unwrap();
+        let p: Vec<_> = self
+            .inner()
+            .select(&header)
+            .next()
+            .unwrap()
+            .select(&label)
+            .map(|label_item| clean_text(label_item.text()))
+            .collect();
+        [p[0].clone(), p[1].clone()]
+    }
+
     pub fn events(&self) -> Vec<Event<String, String>> {
         let id = Selector::parse(".match-detail-card").unwrap();
         let id_name = Selector::parse("h2").unwrap();
@@ -88,6 +103,15 @@ async fn get_bet_titles(group: &fantoccini::elements::Element) -> Vec<String> {
 
 type Interest = HashSet<fortuna::event::football::Football>;
 type Players = [String; 2];
+
+pub async fn init_download(
+    client: &Client,
+    url: &str,
+) -> Result<Tag<Page, String>, CmdError> {
+    client.goto(url).await?;
+    browser::try_accepting_cookie(client, COOKIE_ACCEPT).await?;
+    client.source().await.map(Tag::new)
+}
 
 impl Download<Client, (Page, Interest, Players)> for Tag<Page, String> {
     type Error = CmdError;
@@ -158,7 +182,8 @@ impl Download<Client, (Page, Interest, Players)> for Tag<Page, String> {
             let html = group.html(false).await;
             htmls.push(html.unwrap_or_default());
         }
-        Ok(htmls.join("")).map(Tag::new)
+        client.source().await.map(Tag::new)
+        // Ok(htmls.join("")).map(Tag::new)
     }
 }
 
